@@ -147,11 +147,10 @@ defmodule WindshieldWeb.MonitorChannel do
             _ -> "EBP"
           end
 
-        case Database.upsert_node(account, ip, port, is_ssl, is_watchable, type) do
-          {:ok, new_node} ->
+        with {:ok, new_node} <- Database.upsert_node(account, ip, port, is_ssl, is_watchable, type),
+             :ok <- PrincipalMonitor.upsert_node(new_node) do
             push(socket, "upsert_node", new_node)
-            PrincipalMonitor.upsert_node(new_node)
-
+        else
           res ->
             Logger.info("upsert_node_fail \n#{inspect(res)}")
             push(socket, "upsert_node_fail", %{error: "Fail to update node"})

@@ -1,7 +1,7 @@
 #!/bin/sh
 
 cd frontend
-# npm install
+npm install
 
 cd ../backend
 mix deps.get

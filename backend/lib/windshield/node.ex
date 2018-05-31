@@ -17,14 +17,6 @@ defmodule Windshield.Node do
     GenServer.start_link(__MODULE__, options, name: String.to_atom(account))
   end
 
-  def get_ssl_prefix(is_ssl) do
-    if is_ssl do
-      "https://"
-    else
-      "http://"
-    end
-  end
-
   def init(options) do
     Logger.info("#{inspect(options)} >>> Starting Node Watcher")
 
@@ -43,7 +35,7 @@ defmodule Windshield.Node do
 
     name = String.to_atom(account)
 
-    url = get_ssl_prefix(is_ssl) <> ip <> ":" <> Integer.to_string(port)
+    url = get_url(is_ssl, ip, port)
 
     state = %{
       name: name,
@@ -115,54 +107,57 @@ defmodule Windshield.Node do
 
     principal_node_pid = String.to_atom(settings["principal_node"])
 
-    {:ok, principal_head_block_num} = GenServer.call(principal_node_pid, :get_head_block)
+    case GenServer.call(principal_node_pid, :get_head_block) do
+      {:ok, principal_head_block_num} ->
+        unsynched_blocks_to_alert = settings["unsynched_blocks_to_alert"]
+        same_alert_interval_mins = settings["same_alert_interval_mins"]
 
-    unsynched_blocks_to_alert = settings["unsynched_blocks_to_alert"]
-    same_alert_interval_mins = settings["same_alert_interval_mins"]
+        current_block_num =
+          case state.last_info do
+            %{"head_block_num" => num} -> num
+            _ -> 0
+          end
 
-    current_block_num =
-      case state.last_info do
-        %{"head_block_num" => num} -> num
-        _ -> 0
-      end
+        unsync_blocks = principal_head_block_num - current_block_num
 
-    unsync_blocks = principal_head_block_num - current_block_num
+        last_unsynched_blocks_alert_diff = System.os_time() - last_unsynched_blocks_alert_at
 
-    last_unsynched_blocks_alert_diff = System.os_time() - last_unsynched_blocks_alert_at
+        unsynched_blocks = unsync_blocks > unsynched_blocks_to_alert
 
-    unsynched_blocks = unsync_blocks > unsynched_blocks_to_alert
+        status =
+          cond do
+            unsynched_blocks ->
+              :unsynched_blocks
 
-    status =
-      cond do
-        unsynched_blocks ->
-          :unsynched_blocks
+            state.status == :error ->
+              :error
 
-        state.status == :error ->
-          :error
+            true ->
+              :active
+          end
 
-        true ->
-          :active
-      end
+        last_unsynched_blocks_alert_at =
+          if unsynched_blocks && state.type != "EBP" &&
+               last_unsynched_blocks_alert_diff > same_alert_interval_mins * 60_000_000_000 do
+            error = """
+            Node #{state.name} is out of sync with Principal Node #{settings["principal_node"]}.
+            Current Node Block: #{current_block_num} - Current Principal Node Block: #{
+              principal_head_block_num
+            }
+            - Unsynched blocks: #{unsync_blocks}
+            """
 
-    last_unsynched_blocks_alert_at =
-      if unsynched_blocks && state.type != "EBP" &&
-           last_unsynched_blocks_alert_diff > same_alert_interval_mins * 60_000_000_000 do
-        error = """
-        Node #{state.name} is out of sync with Principal Node #{settings["principal_node"]}.
-        Current Node Block: #{current_block_num} - Current Principal Node Block: #{
-          principal_head_block_num
-        }
-        - Unsynched blocks: #{unsync_blocks}
-        """
+            Database.insert_alert(Alerts.unsynched_blocks(), error, nil)
+            System.os_time()
+          else
+            state.last_unsynched_blocks_alert_at
+          end
 
-        Database.insert_alert(Alerts.unsynched_blocks(), error, nil)
-        System.os_time()
-      else
-        state.last_unsynched_blocks_alert_at
-      end
-
-    {:noreply,
-     %{state | last_unsynched_blocks_alert_at: last_unsynched_blocks_alert_at, status: status}}
+        {:noreply,
+          %{state | last_unsynched_blocks_alert_at: last_unsynched_blocks_alert_at, status: status}}
+      _ ->
+        {:noreply, state}
+    end
   end
 
   def handle_cast(:bpcheck, state) do
@@ -353,7 +348,7 @@ defmodule Windshield.Node do
 
   def get_state(account) do
     try do
-      [{"state", state}] = :ets.lookup(String.to_atom(account), "state")
+      [{"state", state}] = :ets.lookup(account, "state")
       {:ok, state}
     rescue
       e in ArgumentError ->
@@ -361,4 +356,21 @@ defmodule Windshield.Node do
         {:error, "State not found"}
     end
   end
+
+  def get_url(is_ssl, ip, port) do
+    is_ssl
+      |> get_ssl_prefix()
+      |> Kernel.<>(ip)
+      |> Kernel.<>(":")
+      |> Kernel.<>(Integer.to_string(port))
+  end
+
+  def get_ssl_prefix(is_ssl) do
+    if is_ssl do
+      "https://"
+    else
+      "http://"
+    end
+  end
+
 end

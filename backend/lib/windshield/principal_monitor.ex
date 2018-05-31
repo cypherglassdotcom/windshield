@@ -82,12 +82,7 @@ defmodule Windshield.PrincipalMonitor do
       nodes_details
       |> Enum.map(fn n -> spawn_node(n, settings) end)
 
-    principal_url =
-      principal_node["is_ssl"]
-      |> Node.get_ssl_prefix()
-      |> Kernel.<>(principal_node["ip"])
-      |> Kernel.<>(":")
-      |> Kernel.<>(Integer.to_string(principal_node["port"]))
+    principal_url = Node.get_url(principal_node["is_ssl"], principal_node["ip"], principal_node["port"])
 
     state = %{
       state
@@ -109,9 +104,9 @@ defmodule Windshield.PrincipalMonitor do
 
     Logger.info("Principal Monitor Settings Loaded: #{inspect(state)}")
 
-    monitor_loop_start = 1000
+    monitor_loop_start = 10_000
     Process.send_after(self(), :monitor_loop, monitor_loop_start)
-    Logger.info("Principal Monitor Starting monitor loop in : #{monitor_loop_start}")
+    Logger.info("Principal Monitor Starting monitor loop in: #{monitor_loop_start}")
 
     {:noreply, state}
   end
@@ -121,6 +116,10 @@ defmodule Windshield.PrincipalMonitor do
     last_block = state.stats["last_block"]
     log_info(state, "Monitor Loop - #{state.status} | LB: #{last_block} | CN: #{current_nodes}")
 
+    # refresh principal url
+    state = %{ state | principal_url: get_principal_url(state.principal_node)}
+
+    # update blocks and sync
     new_state =
       case process_block_check(state) do
         {:syncing, principal_node, processing_block, current_block_head_num} ->
@@ -333,8 +332,13 @@ defmodule Windshield.PrincipalMonitor do
     {:ok, state}
   end
 
+  def get_principal_url(principal_node) do
+    {:ok, node} = Node.get_state(principal_node)
+    node.url
+  end
+
   def upsert_node(node) do
-    GenServer.cast(:principal_monitor, {:upsert_node, node})
+    GenServer.call(:principal_monitor, {:upsert_node, node}, 30_000)
   end
 
   def get_producers do
@@ -400,7 +404,9 @@ defmodule Windshield.PrincipalMonitor do
     {:reply, {:ok, state.producers}, state}
   end
 
-  def handle_cast({:upsert_node, node}, state) do
+  def handle_call({:upsert_node, node}, _from, state) do
+    log_info(state, "upserting node #{node["account"]}")
+
     %{nodes: nodes, producers: producers, nodes_pids: nodes_pids, settings: settings} = state
 
     node_pid_name = String.to_atom(node["account"])
@@ -411,12 +417,11 @@ defmodule Windshield.PrincipalMonitor do
 
     updated_nodes_pids =
       if node_pid != nil do
+        log_info(state, "stopping #{node_pid}...")
         GenServer.stop(node_pid)
-
         nodes_pids
-        |> Enum.filter(fn np -> np != node_pid_name end)
       else
-        nodes_pids
+        [ node_pid_name | nodes_pids ]
       end
 
     existent_node =
@@ -439,21 +444,22 @@ defmodule Windshield.PrincipalMonitor do
 
             spawn_node(new_node, settings)
 
+            # tolerance to re-spawn and normalize node
+            :timer.sleep(8_000)
+
             new_node
           else
             n
           end
         end)
       else
-        node_details = [node] |> merge_productions_to_nodes(producers)
+        node_details = [node] |> merge_productions_to_nodes(producers) |> hd()
 
-        node_details
-        |> hd()
-        |> spawn_node(settings)
+        spawn_node(node_details, settings)
 
-        nodes ++ node_details
+        [ node_details | nodes ]
       end
 
-    {:noreply, %{state | nodes: updated_nodes, nodes_pids: updated_nodes_pids}}
+    {:reply, :ok, %{state | nodes: updated_nodes, nodes_pids: updated_nodes_pids}}
   end
 end

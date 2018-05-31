@@ -71,9 +71,6 @@ defmodule Windshield.TaskVotesFork do
   end
 
   def fork_report(producers, block_num) do
-    # wait for a few seconds because of nodes initialization
-    :timer.sleep(10_000)
-
     results = collect_producers_stats(producers, block_num)
 
     # news/inactives nodes
@@ -218,7 +215,7 @@ defmodule Windshield.TaskVotesFork do
   end
 
   def report_producer(account, block_num) do
-    with {:ok, state} <- Node.get_state(account) do
+    with {:ok, state} <- account |> String.to_atom |> Node.get_state do
       case state.status do
         :active -> get_block_info(state, block_num)
         status -> {:error_status, account, status}
