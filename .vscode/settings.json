@@ -1,0 +1,4 @@
+{
+  "elm.analysePort": "3379",
+  "elixirLS.projectDir": "./backend"
+}
