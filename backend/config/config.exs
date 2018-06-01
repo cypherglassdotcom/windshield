@@ -52,7 +52,7 @@ config :windshield, Windshield.SystemAuth,
 
 # SETUP MONGODB
 config :mongodb, Mongo,
-  database: "windshield_aye_dawn24",
+  database: "windshield_new",
   name: :windshield,
   pool: DBConnection.Poolboy
 

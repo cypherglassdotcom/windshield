@@ -38,7 +38,7 @@ config :phoenix, :stacktrace_depth, 20
 
 # Configures the database
 config :mongodb, Mongo,
-  database: "windshield_aye2",
+  database: "windshield_new",
   name: :windshield,
   pool: DBConnection.Poolboy
 

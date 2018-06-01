@@ -1,10 +1,10 @@
 #!/bin/sh
 
 cd frontend
-npm install
+# npm install
 
 cd ../backend
-mix deps.get
+# mix deps.get
 
 npm start --prefix ../frontend &
 npm run watch-css --prefix ../frontend &

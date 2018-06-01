@@ -131,8 +131,8 @@ defmodule WindshieldWeb.MonitorChannel do
     {:ok, _user} = SystemAuth.verify(socket, token)
 
     cond do
-      String.length(account) != 12 ->
-        push(socket, "upsert_node_fail", %{error: "Account must have 12 chars"})
+      # String.length(account) != 12 ->
+      #   push(socket, "upsert_node_fail", %{error: "Account must have 12 chars"})
 
       String.length(ip) < 7 ->
         push(socket, "upsert_node_fail", %{error: "Invalid IP"})
@@ -148,12 +148,17 @@ defmodule WindshieldWeb.MonitorChannel do
           end
 
         with {:ok, new_node} <- Database.upsert_node(account, ip, port, is_ssl, is_watchable, type),
-             :ok <- PrincipalMonitor.upsert_node(new_node) do
+             {:ok, state} <- PrincipalMonitor.get_state() do
+
+            if state.principal_node != nil do
+              PrincipalMonitor.upsert_node(new_node)
+            end
+
             push(socket, "upsert_node", new_node)
-        else
-          res ->
-            Logger.info("upsert_node_fail \n#{inspect(res)}")
-            push(socket, "upsert_node_fail", %{error: "Fail to update node"})
+          else
+            _ ->
+              Logger.info("upsert_node_fail")
+              push(socket, "upsert_node_fail", %{error: "Fail to upsert node"})
         end
     end
 

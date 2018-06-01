@@ -58,6 +58,9 @@ Setup your server sensitive informations on `~/windshield/backend/config/config.
 ```
 use Mix.Config
 
+config :mongodb, Mongo,
+  database: "windshield_v1"
+
 config :windshield, Windshield.Mailer,
        server: "localhost",
        port: 25,
@@ -99,12 +102,13 @@ cd ~/windshield/frontend
 cp .env.example .env
 nano .env                   # SETUP YOUR DOMAIN/IP ADDRESSES
 npm install -g elm
-npm install -g elm-install
+npm install -g elm-github-install
+npm install -g create-elm-app
 npm install
 elm-app build
 ```
 
-From the above steps you will have a `build` folder. This is the folder that you will put in your webserver. Assuming that you have Apache2, you can just put it on the root webserver folder (it must be in a root address to work - you can use `domain.com`, `windshield.domain.com`, so on, but does not work in a regular subfolder like `domain.com/windshield`):
+From the above steps you will have a `build` folder. This is the folder that you will put in your webserver. Assuming that you have Apache2, you can just put it on the root webserver folder (it must be in a root address to work - you can use `domain.com`, `windshield.domain.com`, so on, but does not work in a regular subpath like `domain.com/windshield`):
 
 ```
 sudo rm -rf /var/www/html
@@ -112,6 +116,38 @@ sudo cp -R build /var/www/html
 ```
 
 Just open your webserver address and if everything is correct you will receive a green success toast saying: `"Connected to WINDSHIELD Server"`
+
+Config file sample `/etc/apache2/sites-enabled/000-default.conf` for Apache2:
+
+```
+<VirtualHost *:80>
+        #ServerName www.example.com  # here you will use the host you setup on config.exs of the backend
+
+        ServerAdmin webmaster@localhost
+        DocumentRoot /var/www/html
+
+        ErrorLog ${APACHE_LOG_DIR}/error.log
+        CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+        RewriteEngine On
+        RewriteCond %{HTTP:Connection} Upgrade [NC]
+        RewriteCond %{HTTP:Upgrade} websocket [NC]
+        RewriteRule /ws/(.*) ws://localhost:4000/$1 [P,L]
+
+        ProxyPass /api http://localhost:4000/
+        ProxyPassReverse /api http://localhost:4000/
+</VirtualHost>
+```
+
+For the above Apache2 configuration you will need to install the following Apache modules:
+
+```
+sudo a2enmod proxy
+sudo a2enmod proxy_http
+sudo a2enmod proxy_wstunnel
+sudo a2enmod rewrite
+sudo service apache2 restart
+```
 
 ### Nodes Setup
 
