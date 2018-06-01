@@ -106,6 +106,95 @@ nodeModal model =
             cancelButton
 
 
+nodeChainInfoModal : Model -> Html Msg
+nodeChainInfoModal model =
+    let
+        modalClass =
+            if model.showNodeChainInfo then
+                "modal is-active"
+            else
+                "modal"
+
+        content =
+            case model.viewingNode of
+                Just node ->
+                    case model.chainInfo of
+                        Just chainInfo ->
+                            [ fieldInput
+                                model.isLoading
+                                "Account"
+                                node.account
+                                ""
+                                ""
+                                UpdateNodeFormAccount
+                                True
+                            , fieldInput
+                                model.isLoading
+                                "Server Version"
+                                chainInfo.serverVersion
+                                ""
+                                ""
+                                UpdateNodeFormAccount
+                                True
+                            , fieldInput
+                                model.isLoading
+                                "Chain Id"
+                                chainInfo.chainId
+                                ""
+                                ""
+                                UpdateNodeFormAccount
+                                True
+                            , fieldInput
+                                model.isLoading
+                                "Head Block Number"
+                                (toString chainInfo.headBlockNum)
+                                ""
+                                ""
+                                UpdateNodeFormAccount
+                                True
+                            , fieldInput
+                                model.isLoading
+                                "Head Block Id"
+                                chainInfo.headBlockId
+                                ""
+                                ""
+                                UpdateNodeFormAccount
+                                True
+                            , fieldInput
+                                model.isLoading
+                                "Head Block Time"
+                                (formatTime chainInfo.headBlockTime)
+                                ""
+                                ""
+                                UpdateNodeFormAccount
+                                True
+                            , fieldInput
+                                model.isLoading
+                                "Last Irreversible Block Num"
+                                (toString chainInfo.lastIrreversibleBlockNum)
+                                ""
+                                ""
+                                UpdateNodeFormAccount
+                                True
+                            ]
+
+                        Nothing ->
+                            [ text "Loading Chain Info" ]
+
+                Nothing ->
+                    [ text "Loading Node" ]
+
+        title =
+            "Node Blockchain Info"
+    in
+        modalCard model.isLoading
+            title
+            (ToggleNodeChainInfoModal Nothing)
+            [ form [] content ]
+            Nothing
+            Nothing
+
+
 adminLoginModal : Model -> Html Msg
 adminLoginModal model =
     let
@@ -472,6 +561,20 @@ nodeRow model node =
         nodeTagger txt nodeClass =
             span [ class ("tag " ++ nodeClass) ] [ text txt ]
 
+        isLogged =
+            not (String.isEmpty model.user.token)
+
+        actions =
+            [ a [ onClick (ToggleNodeChainInfoModal (Just node)) ]
+                [ icon "info-circle" False False ]
+            , if isLogged then
+                a [ onClick (ToggleNodeModal (Just node)) ]
+                    [ icon "pencil" False False
+                    ]
+              else
+                text ""
+            ]
+
         ( lastPrdAt, lastPrdBlock, votePercentage, nodeTag ) =
             case node.nodeType of
                 BlockProducer ->
@@ -492,11 +595,7 @@ nodeRow model node =
                     )
     in
         tr [ class producerClass ]
-            [ td []
-                [ a [ onClick (ToggleNodeModal (Just node)) ]
-                    [ icon "pencil" False False
-                    ]
-                ]
+            [ td [] actions
             , td []
                 [ text node.account
                 ]
@@ -651,6 +750,8 @@ view model =
                 helpModal model
             else if model.showNode then
                 nodeModal model
+            else if model.showNodeChainInfo then
+                nodeChainInfoModal model
             else if model.showAdminLogin then
                 adminLoginModal model
             else

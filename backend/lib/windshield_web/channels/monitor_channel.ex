@@ -8,6 +8,7 @@ defmodule WindshieldWeb.MonitorChannel do
   alias Windshield.PrincipalMonitor
   alias Windshield.Database
   alias Windshield.SystemAuth
+  alias Windshield.Node
   require Logger
 
   intercept(["tick_stats", "tick_producer", "tick_node", "emit_alert"])
@@ -112,6 +113,15 @@ defmodule WindshieldWeb.MonitorChannel do
     end
 
     {:noreply, socket}
+  end
+
+  def handle_in("get_node_chain_info", %{"account" => account}, socket) do
+    case Node.get_state(String.to_atom(account)) do
+      {:ok, %{last_info: last_info}} ->
+        push(socket, "get_node_chain_info", %{chain_info: last_info})
+      _ ->
+        push(socket, "get_node_chain_info_fail", %{error: "Fail to get node chain info for #{account}"})
+    end
   end
 
   def handle_in(

@@ -90,6 +90,9 @@ initialModel =
     , monitorConnected = False
     , monitorState = MonitorState InitialMonitor 0
     , nodeForm = newNode
+    , showNodeChainInfo = False
+    , viewingNode = Nothing
+    , chainInfo = Nothing
     , settings = Settings "" 0 0 0 0 0 0 0
     , settingsForm = Settings "" 0 0 0 0 0 0 0
     , editSettingsForm = False
@@ -105,6 +108,7 @@ initPhxSocket socketServer =
         |> Phoenix.Socket.on "get_state" "monitor:main" ReceiveMonitorState
         |> Phoenix.Socket.on "get_alerts" "monitor:main" ReceiveAlerts
         |> Phoenix.Socket.on "get_nodes" "monitor:main" ReceiveNodes
+        |> Phoenix.Socket.on "get_node_chain_info" "monitor:main" ReceiveNodeChainInfo
         |> Phoenix.Socket.on "get_nodes_fail" "monitor:main" ReceiveNodesFail
         |> Phoenix.Socket.on "get_producers" "monitor:main" ReceiveProducers
         |> Phoenix.Socket.on "get_producers_fail" "monitor:main" ReceiveProducersFail
@@ -208,6 +212,21 @@ update msg model =
                 Ok nodes ->
                     ( { model
                         | nodes = mergeProductionToNodes nodes model.producers
+                        , isLoading = model.isLoading - 1
+                      }
+                    , Cmd.none
+                    )
+
+                Err error ->
+                    Debug.crash error
+                        ( { model | isLoading = model.isLoading - 1 }, Cmd.none )
+
+        ReceiveNodeChainInfo raw ->
+            case JD.decodeValue chainInfoDataDecoder raw of
+                Ok chainInfoData ->
+                    ( { model
+                        | chainInfo = Just chainInfoData.chainInfo
+                        , showNodeChainInfo = True
                         , isLoading = model.isLoading - 1
                       }
                     , Cmd.none
@@ -421,6 +440,21 @@ update msg model =
 
         SetContent content ->
             ( { model | content = content }, Cmd.none )
+
+        ToggleNodeChainInfoModal n ->
+            case n of
+                Just node ->
+                    let
+                        newModel =
+                            { model | viewingNode = Just node, isLoading = model.isLoading + 1, chainInfo = Nothing }
+
+                        ( phxModel, cmdGetNodeChainInfo ) =
+                            getNodeChainInfo newModel node.account
+                    in
+                        ( phxModel, cmdGetNodeChainInfo )
+
+                Nothing ->
+                    ( { model | viewingNode = Nothing, chainInfo = Nothing, showNodeChainInfo = False }, Cmd.none )
 
         ToggleHelp ->
             ( { model | showHelp = (not model.showHelp) }, Cmd.none )
@@ -756,6 +790,22 @@ submitSettings model =
         )
 
 
+getNodeChainInfo : Model -> String -> ( Model, Cmd Msg )
+getNodeChainInfo model account =
+    let
+        push_ =
+            Phoenix.Push.init "get_node_chain_info" "monitor:main"
+                |> Phoenix.Push.withPayload
+                    (accountEncoder account)
+
+        ( phxSocket, phxCmd ) =
+            Phoenix.Socket.push push_ model.phxSocket
+    in
+        ( { model | phxSocket = phxSocket }
+        , Cmd.map PhoenixMsg phxCmd
+        )
+
+
 submitNode : Model -> ( Model, Cmd Msg )
 submitNode model =
     let
@@ -788,6 +838,13 @@ isoStringToDateDecoder =
                         Err _ ->
                             JD.succeed 0
             )
+
+
+accountEncoder : String -> JE.Value
+accountEncoder account =
+    JE.object
+        [ ( "account", JE.string account )
+        ]
 
 
 nodeEncoder : Node -> String -> JE.Value
@@ -823,6 +880,33 @@ userDecoder =
         |> JDP.required "user" JD.string
         |> JDP.required "token" JD.string
         |> JDP.hardcoded 0.0
+
+
+chainInfoDataDecoder : JD.Decoder ChainInfoData
+chainInfoDataDecoder =
+    JDP.decode
+        ChainInfoData
+        |> JDP.optional "chain_info"
+            chainInfoDecoder
+            (ChainInfo "" "" 0 0 "" "" 0 "" 0 0 0 0)
+
+
+chainInfoDecoder : JD.Decoder ChainInfo
+chainInfoDecoder =
+    JDP.decode
+        ChainInfo
+        |> JDP.required "server_version" JD.string
+        |> JDP.required "chain_id" JD.string
+        |> JDP.required "head_block_num" JD.int
+        |> JDP.required "last_irreversible_block_num" JD.int
+        |> JDP.required "last_irreversible_block_id" JD.string
+        |> JDP.required "head_block_id" JD.string
+        |> JDP.required "head_block_time" isoStringToDateDecoder
+        |> JDP.required "head_block_producer" JD.string
+        |> JDP.required "virtual_block_cpu_limit" JD.int
+        |> JDP.required "virtual_block_net_limit" JD.int
+        |> JDP.required "block_cpu_limit" JD.int
+        |> JDP.required "block_net_limit" JD.int
 
 
 userEncoder : User -> JE.Value

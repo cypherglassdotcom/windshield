@@ -24,6 +24,8 @@ config :logger, :console,
   metadata: [:request_id]
 
 # Configures the SLACK ALERT HOOK
+# See instructions in how to setup your Slack hook below:
+# https://api.slack.com/custom-integrations/incoming-webhooks
 config :windshield, :slack_alert,
   hook: "https://hooks.slack.com/services/xxxx/yyyy/zzzz",
   channel: "#general",

@@ -53,7 +53,7 @@ sudo systemctl start mongod
 sudo systemctl enable mongod
 ```
 
-Setup your server sensitive informations on `~/windshield/backend/config/config.exs`, the file is self-explanatory and has instructions. After you setup all the basic info, create the file `~/windshield/backend/config/prod.secret.exs` in your production environment only with sensitive data.
+Setup your server basic general information on `~/windshield/backend/config/config.exs`, the file is self-explanatory and has instructions. After you setup all the basic info, create the file `~/windshield/backend/config/prod.secret.exs` in your production environment only with sensitive data.
 
 ```
 use Mix.Config

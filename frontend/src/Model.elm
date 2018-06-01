@@ -94,6 +94,26 @@ type alias Node =
     }
 
 
+type alias ChainInfoData =
+    { chainInfo : ChainInfo }
+
+
+type alias ChainInfo =
+    { serverVersion : String
+    , chainId : String
+    , headBlockNum : Int
+    , lastIrreversibleBlockNum : Int
+    , lastIrreversibleBlockId : String
+    , headBlockId : String
+    , headBlockTime : Time.Time
+    , headBlockProducer : String
+    , virtualBlockCpuLimit : Int
+    , virtualBlockNetLimit : Int
+    , blockCpuLimit : Int
+    , blockNetLimit : Int
+    }
+
+
 type alias Notification =
     { notification : NotificationType
     , time : Time.Time
@@ -138,6 +158,9 @@ type alias Model =
     , settingsForm : Settings
     , editSettingsForm : Bool
     , nodeForm : Node
+    , chainInfo : Maybe ChainInfo
+    , viewingNode : Maybe Node
+    , showNodeChainInfo : Bool
     , alerts : List Alert
     }
 
@@ -172,6 +195,7 @@ type Msg
     | ReceiveProducer JE.Value
     | ReceiveUpdateSettingsFail JE.Value
     | ReceiveUpsertNode JE.Value
+    | ReceiveNodeChainInfo JE.Value
     | ReceiveUpsertNodeFail JE.Value
     | ToggleSettingsForm
     | UpdateSettingsFormPrincipalNode String
@@ -186,6 +210,7 @@ type Msg
     | ToggleAdminLoginModal
     | SubmitAdminLogin
     | UpdateAdminLoginPassword String
+    | ToggleNodeChainInfoModal (Maybe Node)
     | ToggleNodeModal (Maybe Node)
     | AuthResponse (Result Http.Error User)
     | UpdateNodeFormAccount String
