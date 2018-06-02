@@ -32,6 +32,26 @@ calcTimeDiff timeOld timeNew =
         inWords dateOld dateNew
 
 
+newErrorNotification : Model -> String -> Bool -> ( Model, Cmd msg )
+newErrorNotification model error unload =
+    let
+        notifications =
+            Notification (Error error)
+                model.currentTime
+                ("err" ++ toString model.currentTime)
+                :: model.notifications
+
+        isLoading =
+            if unload then
+                model.isLoading - 1
+            else
+                model.isLoading
+    in
+        ( { model | notifications = notifications, isLoading = isLoading }
+        , Cmd.none
+        )
+
+
 formatPercentage : Float -> String
 formatPercentage num =
     format usLocale (num * 100) ++ "%"

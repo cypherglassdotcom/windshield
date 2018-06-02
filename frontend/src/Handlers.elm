@@ -2,6 +2,7 @@ module Handlers exposing (..)
 
 import Model exposing (..)
 import Decoders exposing (..)
+import Utils exposing (newErrorNotification)
 import Phoenix.Socket
 import Phoenix.Channel
 import Phoenix.Push
@@ -53,9 +54,8 @@ handleReceiveWsError model errMsg =
                 , Cmd.none
                 )
 
-        Err error ->
-            Debug.crash error
-                ( { model | isLoading = model.isLoading - 1 }, Cmd.none )
+        Err _ ->
+            newErrorNotification model "Error in received message from WINDSHIELD server" True
 
 
 joinChannel : Model -> ( Model, Cmd Msg )
