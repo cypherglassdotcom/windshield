@@ -6,6 +6,7 @@ import Decoders exposing (..)
 import Time
 import Phoenix.Socket
 import Json.Decode as JD
+import Utils exposing (newErrorNotification)
 
 
 -- Ports and Subscriptions
@@ -225,9 +226,8 @@ update msg model =
                     , Cmd.none
                     )
 
-                Err error ->
-                    Debug.crash error
-                        ( { model | isLoading = model.isLoading - 1 }, Cmd.none )
+                Err _ ->
+                    newErrorNotification model "Fail to list Nodes" True
 
         ReceiveNodeChainInfo raw ->
             case JD.decodeValue chainInfoDataDecoder raw of
@@ -240,9 +240,8 @@ update msg model =
                     , Cmd.none
                     )
 
-                Err error ->
-                    Debug.crash error
-                        ( { model | isLoading = model.isLoading - 1 }, Cmd.none )
+                Err _ ->
+                    newErrorNotification model "Fail to parse Chain Info" True
 
         ReceiveProducers raw ->
             case JD.decodeValue producersRowsDecoder raw of
@@ -255,9 +254,8 @@ update msg model =
                     , Cmd.none
                     )
 
-                Err error ->
-                    Debug.crash error
-                        ( { model | isLoading = model.isLoading - 1 }, Cmd.none )
+                Err _ ->
+                    newErrorNotification model "Fail to receive producers data" True
 
         ReceiveSettings raw ->
             case JD.decodeValue settingsDecoder raw of
@@ -271,9 +269,8 @@ update msg model =
                     , Cmd.none
                     )
 
-                Err error ->
-                    Debug.crash error
-                        ( { model | isLoading = model.isLoading - 1 }, Cmd.none )
+                Err _ ->
+                    newErrorNotification model "Fail to load settings" True
 
         ReceiveAlerts raw ->
             case JD.decodeValue alertsRowsDecoder raw of
@@ -285,9 +282,8 @@ update msg model =
                     , Cmd.none
                     )
 
-                Err error ->
-                    Debug.crash error
-                        ( { model | isLoading = model.isLoading - 1 }, Cmd.none )
+                Err _ ->
+                    newErrorNotification model "Fail to list past Alerts" True
 
         ReceiveUpdateSettingsFail raw ->
             handleReceiveWsError model raw
@@ -315,9 +311,8 @@ update msg model =
                         , Cmd.none
                         )
 
-                Err error ->
-                    Debug.crash error
-                        ( { model | isLoading = model.isLoading - 1 }, Cmd.none )
+                Err _ ->
+                    newErrorNotification model "Fail to receive updated node, please refresh page" True
 
         ReceiveUpsertNodeFail raw ->
             handleReceiveWsError model raw
@@ -344,9 +339,8 @@ update msg model =
                     , Cmd.none
                     )
 
-                Err error ->
-                    Debug.crash error
-                        ( { model | isLoading = model.isLoading - 1 }, Cmd.none )
+                Err _ ->
+                    newErrorNotification model "Fail to connect to monitor" True
 
         ReceiveNode raw ->
             case JD.decodeValue nodeDecoder raw of
@@ -378,8 +372,7 @@ update msg model =
                         ( { model | nodes = sortedNodes }, Cmd.none )
 
                 Err error ->
-                    Debug.crash error
-                        ( model, Cmd.none )
+                    ( model, Cmd.none )
 
         ReceiveAlert raw ->
             case JD.decodeValue alertDecoder raw of
@@ -397,7 +390,7 @@ update msg model =
                         )
 
                 Err _ ->
-                    ( model, Cmd.none )
+                    newErrorNotification model "Fail to parse alert data, please see alert tabs and check your notification channels" True
 
         ReceiveProducer raw ->
             case JD.decodeValue producerDecoder raw of
@@ -430,9 +423,8 @@ update msg model =
                         , Cmd.none
                         )
 
-                Err error ->
-                    Debug.crash error
-                        ( model, Cmd.none )
+                Err _ ->
+                    newErrorNotification model "Fail to parse Producers Data" True
 
         Tick time ->
             let

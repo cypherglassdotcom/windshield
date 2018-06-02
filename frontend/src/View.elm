@@ -228,20 +228,23 @@ helpModal model =
         "Cypherglass WINDSHIELD - Help/About"
         ToggleHelp
         [ div [ class "content" ]
-            [ p [] [ text "Cypherglass WINDSHIELD is a smart tracker of all your nodes: active block producers, full nodes and also external nodes of the EOS chain." ]
+            [ p [] [ text "Cypherglass WINDSHIELD is a smart tracker EOS nodes: active block producers, full nodes and external nodes of the EOS chain." ]
             , h3 [] [ text "Nodes Types:" ]
             , ul []
                 [ li []
-                    [ b [] [ text "BlockProducer: " ]
-                    , text "This is your main EOS Block Producer, you will set this one as the principal node. It's used to query the head block number and as comparison base to other nodes, also you want to keep track of the voting rank of this BP Node account (WINDSHIELD automatically alert you)."
+                    [ nodeTagger BlockProducer
+                    , b [] [ text " - " ]
+                    , text "This is your main EOS Block Producer, you will set this one as the principal node. It's used to query the head block number as  a comparison base to other nodes. WINDSHIELD will automatically alert you of the voting rank of this BP node."
                     ]
                 , li []
-                    [ b [] [ text "FullNode: " ]
-                    , text "These are your full nodes that you usually publish to the world. WINDSHIELD automatically check if it's healthy and synced to your principal block producer node."
+                    [ nodeTagger FullNode
+                    , b [] [ text " - " ]
+                    , text "These are full nodes that are usually published to the world. WINDSHIELD automatically checks to see if they are healthy and synced to your principal Block Producer node."
                     ]
                 , li []
-                    [ b [] [ text "ExternalNode: " ]
-                    , text "These are external Key Nodes that WINDSHIELD keep track for you to see if your BlockProducer is aligned to them or if it's being forked somehow. You need to always update WINDSHIELD with the top 21 block producers public nodes - WINDSHIELD alerts you in case new producers went up to the voting rank."
+                    [ nodeTagger ExternalBlockProducer
+                    , b [] [ text " - " ]
+                    , text "These are external Key Nodes that WINDSHIELD keeps track of, so you can see if your BlockProducer is aligned with them or if it has been forked. WINDSHIELD need to always be updated with the top 21 block producer public nodes.  WINDSHIELD alerts you if new producers have ascended to voting rank."
                     ]
                 ]
             ]
@@ -510,11 +513,11 @@ monitorContent model =
             ]
 
 
-nodeTagger : Node -> Html Msg
-nodeTagger node =
+nodeTagger : NodeType -> Html Msg
+nodeTagger nodeType =
     let
         ( txt, nodeClass ) =
-            case node.nodeType of
+            case nodeType of
                 BlockProducer ->
                     ( "BlockPrd", "is-success" )
 
@@ -629,7 +632,7 @@ archivedNodeRow node =
                     ]
                     [ text (nodeAddress node) ]
                 ]
-            , td [] [ nodeTagger node ]
+            , td [] [ nodeTagger node.nodeType ]
             ]
 
 
@@ -746,7 +749,7 @@ nodeRow model node =
                     ]
                     [ text (nodeAddress node) ]
                 ]
-            , td [] [ nodeTagger node ]
+            , td [] [ nodeTagger node.nodeType ]
             , td [] [ text lastPrdBlock ]
             , td [] [ text lastPrdAt ]
             , td [] [ text votePercentage ]
@@ -866,8 +869,8 @@ pageFooter =
                     , text " "
                     , a [ href "https://github.com/cypherglassdotcom/windshield" ]
                         [ text "GitHub" ]
-                    , text " - One more Special Tool, built with love, from  "
-                    , a [ href "http://cypherglass.com" ]
+                    , text " - One more Special Tool built with love, from  "
+                    , a [ href "https://www.cypherglass.com/" ]
                         [ text "Cypherglass.com" ]
                     , text "."
                     ]

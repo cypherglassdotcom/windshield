@@ -1,5 +1,7 @@
 # Cypherglass WINDSHIELD
 
+![Cypherglass WINDSHIELD](https://github.com/cypherglassdotcom/windshield/raw/master/banner.png "Cypherglass WINDSHIELD")
+
 WINDSHIELD is a tool for Block Producers to monitor their EOS Infrastructure.
 It is designed to run from a privileged host inside your intranet and provide data on all nodes, even those that are not exposed to the internet.
 
