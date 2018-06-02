@@ -851,7 +851,7 @@ pageFooter =
                     [ strong []
                         [ text "Cypherglass WINDSHIELD" ]
                     , text " "
-                    , a [ href "https://github.com/leordev/eos-node-monitor" ]
+                    , a [ href "https://github.com/cypherglassdotcom/windshield" ]
                         [ text "GitHub" ]
                     , text " - One more Special Tool, built with love, from  "
                     , a [ href "http://cypherglass.com" ]

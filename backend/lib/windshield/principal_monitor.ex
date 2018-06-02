@@ -343,10 +343,6 @@ defmodule Windshield.PrincipalMonitor do
     GenServer.call(:principal_monitor, {:respawn_node, node}, 30_000)
   end
 
-  def archive_node(node) do
-    GenServer.call(:principal_monitor, {:archive_node, node}, 30_000)
-  end
-
   def get_producers do
     {:ok, state} = get_state()
     {:ok, state.producers}
