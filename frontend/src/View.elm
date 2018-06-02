@@ -68,13 +68,7 @@ nodeModal model =
                         "user"
                         UpdateNodeFormAccount
                         (not node.isNew)
-                    , checkBoxInput
-                        model.isLoading
-                        "Alerts"
-                        "Watch and Receive Alerts"
-                        node.isWatchable
-                        UpdateNodeFormIsWatchable
-                        False
+                    , text ""
                     ]
                 , columns False
                     [ fieldInput
@@ -92,6 +86,22 @@ nodeModal model =
                         "8888"
                         "lock"
                         UpdateNodeFormPort
+                        False
+                    ]
+                , columns False
+                    [ checkBoxInput
+                        model.isLoading
+                        "SSL"
+                        "Above Address is HTTPS"
+                        node.isSsl
+                        UpdateNodeFormIsSsl
+                        False
+                    , checkBoxInput
+                        model.isLoading
+                        "Alerts"
+                        "Watch and Receive Alerts"
+                        node.isWatchable
+                        UpdateNodeFormIsWatchable
                         False
                     ]
                 , columns False
@@ -527,6 +537,7 @@ nodesList model =
             if List.length nodes > 0 then
                 nodes
                     |> List.filter (\n -> not n.isArchived)
+                    |> List.sortBy .position
                     |> List.map (\n -> nodeRow model n)
             else
                 [ tr []

@@ -201,7 +201,8 @@ defmodule Windshield.Database do
       }
 
       create_settings(new_settings)
-      new_settings
+
+      {:ok, new_settings}
     end
   end
 

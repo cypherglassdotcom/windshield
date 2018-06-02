@@ -175,14 +175,21 @@ defmodule WindshieldWeb.MonitorChannel do
                  is_archived,
                  position
                ),
-             {:ok, state} <- PrincipalMonitor.get_state() do
-          PrincipalMonitor.respawn_node(new_node)
-
+             {:ok, _state} <- PrincipalMonitor.get_state(),
+             :ok <- PrincipalMonitor.respawn_node(new_node) do
           push(socket, "upsert_node", new_node)
         else
           _ ->
             Logger.info("upsert_node_fail")
-            push(socket, "upsert_node_fail", %{error: "Fail to upsert node"})
+
+            push(socket, "upsert_node_fail", %{
+              error: """
+              Fail to upsert node - If your Principal BP is syncing for
+              the first time the server might be busy and can take
+              a while to handle your request. DO NOT RESUBMIT, please refresh
+              the page until your request is done.
+              """
+            })
         end
     end
 
@@ -203,16 +210,21 @@ defmodule WindshieldWeb.MonitorChannel do
 
     with {:ok, state} <- PrincipalMonitor.get_state(),
          true <- state.principal_node != String.to_atom(account),
-         {:ok, node} <- Database.archive_restore_node(account, is_archived) do
-      PrincipalMonitor.respawn_node(node)
-
+         {:ok, node} <- Database.archive_restore_node(account, is_archived),
+         :ok <- PrincipalMonitor.respawn_node(node) do
       push(socket, "archive_restore_node", node)
     else
       _ ->
         Logger.info("archive_restore_node_fail")
 
         push(socket, "archive_restore_node_fail", %{
-          error: "Fail to archive/restore node - you cannot archive your principal node"
+          error: """
+          Fail to archive/restore node - you cannot archive
+          your principal node and If your Principal BP is syncing for
+          the first time the server might be busy and can take
+          a while to handle your request. DO NOT RESUBMIT, please refresh
+          the page until your request is done.
+          """
         })
     end
 

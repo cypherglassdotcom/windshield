@@ -301,6 +301,7 @@ update msg model =
                                 :: (model.nodes
                                         |> List.filter (\n -> n.account /= node.account)
                                    )
+                                |> List.sortBy .position
                     in
                         ( { model
                             | isLoading = model.isLoading - 1
@@ -673,6 +674,16 @@ update msg model =
 
                 newObj =
                     { newForm | isWatchable = not newForm.isWatchable }
+            in
+                ( { model | nodeForm = newObj }, Cmd.none )
+
+        UpdateNodeFormIsSsl ->
+            let
+                newForm =
+                    model.nodeForm
+
+                newObj =
+                    { newForm | isSsl = not newForm.isSsl }
             in
                 ( { model | nodeForm = newObj }, Cmd.none )
 

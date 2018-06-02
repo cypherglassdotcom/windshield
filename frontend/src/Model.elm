@@ -226,6 +226,7 @@ type Msg
     | UpdateNodeFormType String
     | UpdateNodeFormPosition String
     | UpdateNodeFormIsWatchable
+    | UpdateNodeFormIsSsl
     | SubmitNode
     | ShowArchiveConfirmationModal Node
     | ShowRestoreConfirmationModal Node

@@ -20,11 +20,13 @@ defmodule Windshield.PrincipalMonitor do
   def init(name) do
     Logger.info("#{name} >>> Starting Principal Monitor")
 
+    {:ok, settings} = Database.get_settings()
+
     state = %{
       name: name,
       loop: 0,
       status: :initial,
-      settings: nil,
+      settings: settings,
       stats: nil,
       block_processing: -1,
       current_block_head_num: -1,
@@ -51,14 +53,14 @@ defmodule Windshield.PrincipalMonitor do
   def handle_info(:load_settings, state) do
     {:ok, settings} = Database.get_settings()
 
-    if settings["principal_node"] == "" do
-      Logger.info(
-        "#{state.name} >>> Can't initialize the monitor without setting a principal node"
-      )
+    # if settings["principal_node"] == "" do
+    #   Logger.info(
+    #     "#{state.name} >>> Can't initialize the monitor without setting a principal node"
+    #   )
 
-      :timer.sleep(10_000)
-      raise "Invalid Princpal Node in Settings"
-    end
+    #   :timer.sleep(10_000)
+    #   raise "Invalid Princpal Node in Settings"
+    # end
 
     {:ok, nodes} = Database.get_nodes()
     nodes = nodes |> Enum.filter(fn n -> !n["is_archived"] end)
@@ -73,42 +75,53 @@ defmodule Windshield.PrincipalMonitor do
       nodes_details
       |> Enum.find(nil, fn n -> n["account"] == settings["principal_node"] end)
 
-    if principal_node == nil do
-      Logger.info("#{state.name} >>> Invalid principal node #{settings["principal_node"]}")
-      :timer.sleep(10_000)
-      raise "Principal Node not Found from the one in Settings"
-    end
+    {state, loop, loop_name} =
+      if principal_node == nil do
+        # Logger.info("#{state.name} >>> Invalid principal node #{settings["principal_node"]}")
+        # :timer.sleep(10_000)
+        # raise "Principal Node not Found from the one in Settings"
 
-    spawned_nodes =
-      nodes_details
-      |> Enum.map(fn n -> spawn_node(n, settings) end)
+        state = %{
+          state
+          | settings: settings,
+            stats: stats,
+            nodes: nodes_details,
+            producers: producers
+        }
 
-    principal_url =
-      Node.get_url(principal_node["is_ssl"], principal_node["ip"], principal_node["port"])
+        Logger.info("Principal Monitor Waiting for Principal Node Settings: #{inspect(state)}")
 
-    state = %{
-      state
-      | loop: 0,
-        status: :active,
-        settings: settings,
-        stats: stats,
-        block_processing: -1,
-        current_block_head_num: -1,
-        principal_node: String.to_atom(principal_node["account"]),
-        principal_url: principal_url,
-        nodes_pids: spawned_nodes,
-        nodes: nodes_details,
-        producers: producers,
-        last_calc_votes_at: 0
-    }
+        {state, :load_settings, "Reload Settings"}
+      else
+        spawned_nodes =
+          nodes_details
+          |> Enum.map(fn n -> spawn_node(n, settings) end)
+
+        principal_url =
+          Node.get_url(principal_node["is_ssl"], principal_node["ip"], principal_node["port"])
+
+        state = %{
+          state
+          | status: :active,
+            settings: settings,
+            stats: stats,
+            principal_node: String.to_atom(principal_node["account"]),
+            principal_url: principal_url,
+            nodes_pids: spawned_nodes,
+            nodes: nodes_details,
+            producers: producers
+        }
+
+        Logger.info("Principal Monitor Settings Loaded: #{inspect(state)}")
+
+        {state, :monitor_loop, "Starting Principal Loop"}
+      end
 
     :ets.insert(state.name, {"state", state})
 
-    Logger.info("Principal Monitor Settings Loaded: #{inspect(state)}")
-
     monitor_loop_start = 10_000
-    Process.send_after(self(), :monitor_loop, monitor_loop_start)
-    Logger.info("Principal Monitor Starting monitor loop in: #{monitor_loop_start}")
+    Process.send_after(self(), loop, monitor_loop_start)
+    Logger.info("Principal Monitor #{loop_name} in: #{monitor_loop_start}")
 
     {:noreply, state}
   end
@@ -330,8 +343,14 @@ defmodule Windshield.PrincipalMonitor do
   def log_error(state, content), do: Logger.error("#{state.name}|#{state.loop} >>> #{content}")
 
   def get_state do
-    [{"state", state}] = :ets.lookup(:principal_monitor, "state")
-    {:ok, state}
+    try do
+      [{"state", state}] = :ets.lookup(:principal_monitor, "state")
+      {:ok, state}
+    rescue
+      e in ArgumentError ->
+        Logger.error("principal_monitor >>> Fail to get State\n #{inspect(e)}")
+        {:error, "State not found"}
+    end
   end
 
   def get_principal_url(principal_node) do
@@ -340,7 +359,11 @@ defmodule Windshield.PrincipalMonitor do
   end
 
   def respawn_node(node) do
-    GenServer.call(:principal_monitor, {:respawn_node, node}, 30_000)
+    try do
+      GenServer.call(:principal_monitor, {:respawn_node, node}, 30_000)
+    catch
+      :exit, _ -> :error
+    end
   end
 
   def get_producers do
@@ -382,7 +405,7 @@ defmodule Windshield.PrincipalMonitor do
       |> Enum.find(fn n -> n == node_pid_name end)
 
     # stop node if needed and remove from list
-    if node_pid != nil do
+    if node_pid != nil && GenServer.whereis(node_pid) != nil do
       log_info(state, "stopping #{node_pid}...")
       GenServer.stop(node_pid)
     end
@@ -397,19 +420,34 @@ defmodule Windshield.PrincipalMonitor do
       |> Enum.filter(fn np -> np != node_pid_name end)
 
     # if it is archived, we are done, if not (re)spawn
-    {updated_nodes, updated_nodes_pids} =
+    {updated_nodes, updated_nodes_pids, principal_url} =
       if node["is_archived"] do
         log_info(state, "node #{node["account"]} was archived")
-        {updated_nodes, updated_nodes_pids}
+        {updated_nodes, updated_nodes_pids, state.principal_url}
       else
         node_details = [node] |> merge_productions_to_nodes(producers) |> hd()
-        spawn_node(node_details, settings)
-        {[node_details | updated_nodes], [node_pid_name | nodes_pids]}
+
+        if settings["principal_node"] != "" do
+          spawn_node(node_details, settings)
+        end
+
+        # update principal url in case it's respawning principal node
+        principal_url =
+          if node_pid_name == state.principal_node do
+            Node.get_url(node["is_ssl"], node["ip"], node["port"])
+          else
+            state.principal_url
+          end
+
+        {[node_details | updated_nodes], [node_pid_name | nodes_pids], principal_url}
       end
 
     # tolerance time to wait for a next loop
-    :timer.sleep(2_500 + settings["node_loop_interval"])
+    if settings["principal_node"] != "" do
+      :timer.sleep(2_500 + settings["node_loop_interval"])
+    end
 
-    {:reply, :ok, %{state | nodes: updated_nodes, nodes_pids: updated_nodes_pids}}
+    {:reply, :ok,
+     %{state | nodes: updated_nodes, nodes_pids: updated_nodes_pids, principal_url: principal_url}}
   end
 end
