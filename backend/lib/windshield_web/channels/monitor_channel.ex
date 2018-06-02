@@ -176,7 +176,6 @@ defmodule WindshieldWeb.MonitorChannel do
                  position
                ),
              {:ok, state} <- PrincipalMonitor.get_state() do
-
           PrincipalMonitor.respawn_node(new_node)
 
           push(socket, "upsert_node", new_node)
@@ -205,7 +204,6 @@ defmodule WindshieldWeb.MonitorChannel do
     with {:ok, state} <- PrincipalMonitor.get_state(),
          true <- state.principal_node != String.to_atom(account),
          {:ok, node} <- Database.archive_restore_node(account, is_archived) do
-
       PrincipalMonitor.respawn_node(node)
 
       push(socket, "archive_restore_node", node)

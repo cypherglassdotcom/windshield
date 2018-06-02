@@ -407,8 +407,8 @@ defmodule Windshield.PrincipalMonitor do
         {[node_details | updated_nodes], [node_pid_name | nodes_pids]}
       end
 
-      # tolerance time to wait for a next loop
-      :timer.sleep(2_500 + settings["node_loop_interval"])
+    # tolerance time to wait for a next loop
+    :timer.sleep(2_500 + settings["node_loop_interval"])
 
     {:reply, :ok, %{state | nodes: updated_nodes, nodes_pids: updated_nodes_pids}}
   end
