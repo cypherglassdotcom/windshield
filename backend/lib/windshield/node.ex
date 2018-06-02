@@ -85,11 +85,11 @@ defmodule Windshield.Node do
     GenServer.cast(state.name, :ping)
 
     # check block production if its a bp
-    if state.type == "BP" do
+    if state.type == "BP" && state.is_watchable do
       GenServer.cast(state.name, :bpcheck)
     end
 
-    if state.account != settings["principal_node"] do
+    if state.account != settings["principal_node"] && state.is_watchable do
       GenServer.cast(state.name, :unsync_check)
     end
 
@@ -159,6 +159,7 @@ defmodule Windshield.Node do
   end
 
   def handle_cast(:bpcheck, state) do
+    # apply UTC timezone
     last_produced_block_at = state.last_produced_block_at <> "Z"
 
     last_production_datetime =
@@ -193,7 +194,6 @@ defmodule Windshield.Node do
   end
 
   def handle_cast(:ping, state) do
-
     {info_body, ping, error} = ping_info(state)
 
     new_ping_stats = calc_ping_stats(state, ping)
@@ -208,7 +208,7 @@ defmodule Windshield.Node do
             state.last_ping_alert_at,
             error,
             new_ping_stats,
-            state.type != "EBP"
+            state.is_watchable
           )
 
         {:error, last_ping_alert}
@@ -270,7 +270,7 @@ defmodule Windshield.Node do
     }
 
     if new_state.vote_position != state.vote_position && state.type == "BP" &&
-         state.vote_position > 0 do
+         state.vote_position > 0 && state.is_watchable do
       msg = """
       The BP #{state.account} has changed the voting position rank
       from #{state.vote_position} to #{new_state.vote_position}.

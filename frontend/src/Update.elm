@@ -665,6 +665,16 @@ update msg model =
             in
                 ( { model | nodeForm = newObj }, Cmd.none )
 
+        UpdateNodeFormIsWatchable ->
+            let
+                newForm =
+                    model.nodeForm
+
+                newObj =
+                    { newForm | isWatchable = not newForm.isWatchable }
+            in
+                ( { model | nodeForm = newObj }, Cmd.none )
+
         UpdateNodeFormPort str ->
             let
                 newForm =

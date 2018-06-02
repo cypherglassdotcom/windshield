@@ -362,42 +362,6 @@ defmodule Windshield.PrincipalMonitor do
     {status, producers_rows}
   end
 
-  def calc_votes(state) do
-    case get_producers_table(state) do
-      {:ok, producers} ->
-        # total votes
-        total_votes =
-          producers
-          |> Enum.reduce(0.0, fn r, acc -> String.to_float(r["total_votes"]) + acc end)
-
-        # sort producers
-        producers =
-          producers
-          |> Enum.sort(fn a, b ->
-            String.to_float(a["total_votes"]) >= String.to_float(b["total_votes"])
-          end)
-
-        # update respective nodes
-        producers
-        |> Enum.with_index(1)
-        |> Enum.each(fn {producer, index} ->
-          votes_count = String.to_float(producer["total_votes"])
-          vote_percentage = votes_count / total_votes
-
-          log_info(state, "#{producer["owner"]} - Votes (%): #{votes_count} (#{vote_percentage})")
-
-          GenServer.cast(
-            String.to_atom(producer["owner"]),
-            {:update_votes, votes_count, vote_percentage, index}
-          )
-        end)
-
-      err ->
-        # error, rollbacks to active status
-        log_error(state, "Fail to get Votes Info from #{state.principal_node}:\n#{inspect(err)}")
-    end
-  end
-
   def handle_call(:get_state, _from, state) do
     {:reply, {:ok, state}, state}
   end

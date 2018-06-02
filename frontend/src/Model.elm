@@ -223,6 +223,7 @@ type Msg
     | UpdateNodeFormIp String
     | UpdateNodeFormPort String
     | UpdateNodeFormType String
+    | UpdateNodeFormIsWatchable
     | SubmitNode
     | ShowArchiveConfirmationModal Node
     | ShowRestoreConfirmationModal Node

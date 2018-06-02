@@ -66,35 +66,46 @@ nodeModal model =
             title
             (ToggleNodeModal Nothing)
             [ form []
-                [ fieldInput
-                    model.isLoading
-                    "Account"
-                    node.account
-                    "cypherglass1"
-                    "user"
-                    UpdateNodeFormAccount
-                    (not node.isNew)
-                , fieldInput
-                    model.isLoading
-                    "IP"
-                    node.ip
-                    "127.0.0.1"
-                    "server"
-                    UpdateNodeFormIp
-                    False
-                , fieldInput
-                    model.isLoading
-                    "Port"
-                    (toString node.addrPort)
-                    "8888"
-                    "lock"
-                    UpdateNodeFormPort
-                    False
+                [ columns False
+                    [ fieldInput
+                        model.isLoading
+                        "Account"
+                        node.account
+                        "cypherglass1"
+                        "user"
+                        UpdateNodeFormAccount
+                        (not node.isNew)
+                    , checkBoxInput
+                        model.isLoading
+                        "Alerts"
+                        "Watch and Receive Alerts"
+                        node.isWatchable
+                        UpdateNodeFormIsWatchable
+                        False
+                    ]
+                , columns False
+                    [ fieldInput
+                        model.isLoading
+                        "IP"
+                        node.ip
+                        "127.0.0.1"
+                        "server"
+                        UpdateNodeFormIp
+                        False
+                    , fieldInput
+                        model.isLoading
+                        "Port"
+                        (toString node.addrPort)
+                        "8888"
+                        "lock"
+                        UpdateNodeFormPort
+                        False
+                    ]
                 , selectInput
                     model.isLoading
                     [ ( "BP", "BP - Block Producer" )
                     , ( "FN", "FN - Full Node" )
-                    , ( "EBP", "EBP - External Block Producer" )
+                    , ( "EBP", "EBP - External Nodes / Block Producers" )
                     ]
                     "Node Type"
                     (nodeTypeTxt node.nodeType)

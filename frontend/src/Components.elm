@@ -184,6 +184,42 @@ selectInput isLoading optionsType fieldLabel fieldValue fieldIcon fieldMsg =
             ]
 
 
+checkBoxInput : Int -> String -> String -> Bool -> msg -> Bool -> Html msg
+checkBoxInput isLoading fieldLabel fieldPlaceHolder isChecked checkMsg readOnly =
+    let
+        loadingClass =
+            if isLoading > 0 then
+                " is-loading"
+            else
+                ""
+
+        ( valueTxt, inputClass ) =
+            if isChecked then
+                ( "On", " is-success" )
+            else
+                ( "Off", " is-danger" )
+
+        checkTag =
+            div [ class ("tags has-addons" ++ loadingClass) ]
+                [ span [ class ("tag is-medium" ++ inputClass) ]
+                    [ text valueTxt ]
+                , span [ class "tag is-medium" ]
+                    [ text fieldPlaceHolder ]
+                ]
+
+        content =
+            if isLoading == 0 && not readOnly then
+                a [ onClick checkMsg ] [ checkTag ]
+            else
+                checkTag
+    in
+        div [ class "field" ]
+            [ label [ class "label" ]
+                [ text fieldLabel ]
+            , content
+            ]
+
+
 modalCard : Int -> String -> msg -> List (Html msg) -> Maybe ( String, msg ) -> Maybe ( String, msg ) -> Html msg
 modalCard isLoading title close body ok cancel =
     let
