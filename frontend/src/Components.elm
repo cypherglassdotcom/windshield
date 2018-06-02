@@ -1,8 +1,8 @@
-port module Components exposing (..)
+module Components exposing (..)
 
 import Html exposing (..)
-import Html.Attributes exposing (attribute, class, defaultValue, href, placeholder, target, type_, value, src, colspan)
-import Html.Events exposing (onClick, onInput, onWithOptions)
+import Html.Attributes exposing (attribute, class, defaultValue, placeholder, type_, value)
+import Html.Events exposing (onClick, onInput)
 import Model exposing (Msg(NoOpStr))
 
 
@@ -98,7 +98,7 @@ basicFieldInput isLoading fieldLabel fieldValue fieldPlaceHolder fieldIcon field
 
         field =
             if readOnly then
-                div [ class ("field-read") ] [ text fieldValue ]
+                div [ class "field-read" ] [ text fieldValue ]
             else
                 div
                     [ class

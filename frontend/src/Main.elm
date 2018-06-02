@@ -1,4 +1,4 @@
-port module Main exposing (..)
+module Main exposing (..)
 
 import Html
 import Model exposing (Model, Msg, Flags)

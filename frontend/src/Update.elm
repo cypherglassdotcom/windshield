@@ -212,8 +212,8 @@ update msg model =
                     in
                         ( { model | monitorState = newMonitorState }, Cmd.none )
 
-                Err err ->
-                    Debug.log err ( model, Cmd.none )
+                Err _ ->
+                    ( model, Cmd.none )
 
         ReceiveNodes raw ->
             case JD.decodeValue nodesRowsDecoder raw of
@@ -250,7 +250,7 @@ update msg model =
                     ( { model
                         | producers = producers
                         , isLoading = model.isLoading - 1
-                        , nodes = (mergeProductionToNodes model.nodes producers)
+                        , nodes = mergeProductionToNodes model.nodes producers
                       }
                     , Cmd.none
                     )
@@ -391,14 +391,12 @@ update msg model =
                             Notification (Error alert.description) model.currentTime (toString alert.createdAt)
                                 :: model.notifications
                     in
-                        ( { model | alerts = alerts, notifications = notifications }, (audioCmd model.isMuted) )
+                        ( { model | alerts = alerts, notifications = notifications }
+                        , audioCmd model.isMuted
+                        )
 
-                Err error ->
-                    let
-                        test =
-                            Debug.crash (error)
-                    in
-                        ( model, Cmd.none )
+                Err _ ->
+                    ( model, Cmd.none )
 
         ReceiveProducer raw ->
             case JD.decodeValue producerDecoder raw of
@@ -474,14 +472,14 @@ update msg model =
                     ( { model | viewingNode = Nothing, chainInfo = Nothing, showNodeChainInfo = False }, Cmd.none )
 
         ToggleHelp ->
-            ( { model | showHelp = (not model.showHelp) }, Cmd.none )
+            ( { model | showHelp = not model.showHelp }, Cmd.none )
 
         ToggleArchivedNodes ->
-            ( { model | showArchivedNodes = (not model.showArchivedNodes) }, Cmd.none )
+            ( { model | showArchivedNodes = not model.showArchivedNodes }, Cmd.none )
 
         ToggleAdminLoginModal ->
             ( { model
-                | showAdminLogin = (not model.showAdminLogin)
+                | showAdminLogin = not model.showAdminLogin
                 , adminPassword = ""
               }
             , Cmd.none
@@ -505,12 +503,8 @@ update msg model =
             , signedIn (userEncoder user)
             )
 
-        AuthResponse (Err err) ->
+        AuthResponse (Err _) ->
             let
-                error =
-                    Debug.log ">>>error"
-                        err
-
                 notifications =
                     Notification (Error "Admin Login Failed") model.currentTime "adminLoginFailed"
                         :: model.notifications
@@ -531,7 +525,7 @@ update msg model =
                     ( { model | showNode = False }, Cmd.none )
 
         ToggleSound ->
-            ( { model | isMuted = (not model.isMuted) }, Cmd.none )
+            ( { model | isMuted = not model.isMuted }, Cmd.none )
 
         Logout ->
             ( { model | user = User "" "" 0 }, signOut () )
@@ -539,7 +533,7 @@ update msg model =
         ToggleSettingsForm ->
             ( { model
                 | settingsForm = model.settings
-                , editSettingsForm = (not model.editSettingsForm)
+                , editSettingsForm = not model.editSettingsForm
               }
             , Cmd.none
             )
@@ -650,7 +644,7 @@ update msg model =
                 ( newModel, cmd ) =
                     submitSettings model
             in
-                ( { newModel | isLoading = (model.isLoading + 1) }, cmd )
+                ( { newModel | isLoading = model.isLoading + 1 }, cmd )
 
         UpdateNodeFormAccount str ->
             let
@@ -714,7 +708,7 @@ update msg model =
                     model.nodeForm
 
                 newObj =
-                    { newForm | nodeType = (nodeTypeFromTxt str) }
+                    { newForm | nodeType = nodeTypeFromTxt str }
             in
                 ( { model | nodeForm = newObj }, Cmd.none )
 
@@ -723,7 +717,7 @@ update msg model =
                 ( newModel, cmd ) =
                     submitNode model
             in
-                ( { newModel | isLoading = (model.isLoading + 1) }, cmd )
+                ( { newModel | isLoading = model.isLoading + 1 }, cmd )
 
         ShowArchiveConfirmationModal node ->
             ( { model | viewingNode = Just node, showArchiveConfirmation = True }
@@ -745,7 +739,7 @@ update msg model =
                 ( newModel, cmd ) =
                     submitArchive model node True
             in
-                ( { newModel | isLoading = (model.isLoading + 1) }, cmd )
+                ( { newModel | isLoading = model.isLoading + 1 }, cmd )
 
         CancelRestore ->
             ( { model | viewingNode = Nothing, showRestoreConfirmation = False }
@@ -757,7 +751,7 @@ update msg model =
                 ( newModel, cmd ) =
                     submitArchive model node False
             in
-                ( { newModel | isLoading = (model.isLoading + 1) }, cmd )
+                ( { newModel | isLoading = model.isLoading + 1 }, cmd )
 
         NoOp ->
             ( model, Cmd.none )

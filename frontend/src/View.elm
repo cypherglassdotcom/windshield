@@ -2,8 +2,8 @@ module View exposing (..)
 
 import Model exposing (..)
 import Html exposing (..)
-import Html.Attributes exposing (attribute, class, defaultValue, href, placeholder, target, type_, value, src, colspan, title)
-import Html.Events exposing (onClick, onInput, onWithOptions)
+import Html.Attributes exposing (attribute, class, href, target, src, colspan, title)
+import Html.Events exposing (onClick, onWithOptions)
 import Components exposing (..)
 import Utils exposing (..)
 import Json.Decode as JD
@@ -41,28 +41,22 @@ notificationsView model =
 nodeModal : Model -> Html Msg
 nodeModal model =
     let
-        modalClass =
-            if model.showNode then
-                "modal is-active"
-            else
-                "modal"
-
         node =
             model.nodeForm
 
         ( submitButton, cancelButton ) =
-            ( (Just ( "Submit", SubmitNode ))
-            , (Just ( "Cancel", (ToggleNodeModal Nothing) ))
+            ( Just ( "Submit", SubmitNode )
+            , Just ( "Cancel", ToggleNodeModal Nothing )
             )
 
-        title =
+        modalTitle =
             if node.isNew then
                 "Create a New Node"
             else
                 "Editing Node"
     in
         modalCard model.isLoading
-            title
+            modalTitle
             (ToggleNodeModal Nothing)
             [ form []
                 [ columns False
@@ -129,13 +123,7 @@ nodeModal model =
 nodeChainInfoModal : Model -> Html Msg
 nodeChainInfoModal model =
     let
-        modalClass =
-            if model.showNodeChainInfo then
-                "modal is-active"
-            else
-                "modal"
-
-        ( title, content ) =
+        ( modalTitle, content ) =
             case model.viewingNode of
                 Just node ->
                     ( "Node " ++ node.account ++ " Chain Info"
@@ -187,7 +175,7 @@ nodeChainInfoModal model =
                     ( "Loading Node Chain Info", [ text "Loading Node" ] )
     in
         modalCard model.isLoading
-            title
+            modalTitle
             (ToggleNodeChainInfoModal Nothing)
             [ form [] content ]
             Nothing
@@ -197,15 +185,9 @@ nodeChainInfoModal model =
 adminLoginModal : Model -> Html Msg
 adminLoginModal model =
     let
-        modalClass =
-            if model.showAdminLogin then
-                "modal is-active"
-            else
-                "modal"
-
         ( submitButton, cancelButton ) =
-            ( (Just ( "Submit", SubmitAdminLogin ))
-            , (Just ( "Cancel", ToggleAdminLoginModal ))
+            ( Just ( "Submit", SubmitAdminLogin )
+            , Just ( "Cancel", ToggleAdminLoginModal )
             )
     in
         modalCard model.isLoading
@@ -232,59 +214,45 @@ adminLoginModal model =
 
 helpModal : Model -> Html Msg
 helpModal model =
-    let
-        modalClass =
-            if model.showHelp then
-                "modal is-active"
-            else
-                "modal"
-    in
-        modalCard model.isLoading
-            "Cypherglass WINDSHIELD - Help/About"
-            ToggleHelp
-            [ div [ class "content" ]
-                [ p [] [ text "Cypherglass WINDSHIELD is a smart tracker of all your nodes: active block producers, full nodes and also external nodes of the EOS chain." ]
-                , h3 [] [ text "Nodes Types:" ]
-                , ul []
-                    [ li []
-                        [ b [] [ text "BlockProducer: " ]
-                        , text "This is your main EOS Block Producer, you will set this one as the principal node. It's used to query the head block number and as comparison base to other nodes, also you want to keep track of the voting rank of this BP Node account (WINDSHIELD automatically alert you)."
-                        ]
-                    , li []
-                        [ b [] [ text "FullNode: " ]
-                        , text "These are your full nodes that you usually publish to the world. WINDSHIELD automatically check if it's healthy and synced to your principal block producer node."
-                        ]
-                    , li []
-                        [ b [] [ text "ExternalNode: " ]
-                        , text "These are external Key Nodes that WINDSHIELD keep track for you to see if your BlockProducer is aligned to them or if it's being forked somehow. You need to always update WINDSHIELD with the top 21 block producers public nodes - WINDSHIELD alerts you in case new producers went up to the voting rank."
-                        ]
+    modalCard model.isLoading
+        "Cypherglass WINDSHIELD - Help/About"
+        ToggleHelp
+        [ div [ class "content" ]
+            [ p [] [ text "Cypherglass WINDSHIELD is a smart tracker of all your nodes: active block producers, full nodes and also external nodes of the EOS chain." ]
+            , h3 [] [ text "Nodes Types:" ]
+            , ul []
+                [ li []
+                    [ b [] [ text "BlockProducer: " ]
+                    , text "This is your main EOS Block Producer, you will set this one as the principal node. It's used to query the head block number and as comparison base to other nodes, also you want to keep track of the voting rank of this BP Node account (WINDSHIELD automatically alert you)."
+                    ]
+                , li []
+                    [ b [] [ text "FullNode: " ]
+                    , text "These are your full nodes that you usually publish to the world. WINDSHIELD automatically check if it's healthy and synced to your principal block producer node."
+                    ]
+                , li []
+                    [ b [] [ text "ExternalNode: " ]
+                    , text "These are external Key Nodes that WINDSHIELD keep track for you to see if your BlockProducer is aligned to them or if it's being forked somehow. You need to always update WINDSHIELD with the top 21 block producers public nodes - WINDSHIELD alerts you in case new producers went up to the voting rank."
                     ]
                 ]
             ]
-            Nothing
-            Nothing
+        ]
+        Nothing
+        Nothing
 
 
 archiveConfirmationModal : Model -> Html Msg
 archiveConfirmationModal model =
     case model.viewingNode of
         Just node ->
-            let
-                modalClass =
-                    if model.showHelp then
-                        "modal is-active"
-                    else
-                        "modal"
-            in
-                modalCard model.isLoading
-                    ("Archive Node " ++ node.account)
-                    CancelArchive
-                    [ div [ class "content" ]
-                        [ p [] [ text ("Are you sure that you want to archive the node " ++ node.account ++ "?") ]
-                        ]
+            modalCard model.isLoading
+                ("Archive Node " ++ node.account)
+                CancelArchive
+                [ div [ class "content" ]
+                    [ p [] [ text ("Are you sure that you want to archive the node " ++ node.account ++ "?") ]
                     ]
-                    (Just ( ("Yes, I Want to Archive " ++ node.account), (SubmitArchive node) ))
-                    (Just ( "Cancel", CancelArchive ))
+                ]
+                (Just ( "Yes, I Want to Archive " ++ node.account, SubmitArchive node ))
+                (Just ( "Cancel", CancelArchive ))
 
         _ ->
             text ""
@@ -294,22 +262,15 @@ restoreConfirmationModal : Model -> Html Msg
 restoreConfirmationModal model =
     case model.viewingNode of
         Just node ->
-            let
-                modalClass =
-                    if model.showHelp then
-                        "modal is-active"
-                    else
-                        "modal"
-            in
-                modalCard model.isLoading
-                    ("Restore Node " ++ node.account)
-                    CancelRestore
-                    [ div [ class "content" ]
-                        [ p [] [ text ("Are you sure that you want to restore the node " ++ node.account ++ "?") ]
-                        ]
+            modalCard model.isLoading
+                ("Restore Node " ++ node.account)
+                CancelRestore
+                [ div [ class "content" ]
+                    [ p [] [ text ("Are you sure that you want to restore the node " ++ node.account ++ "?") ]
                     ]
-                    (Just ( ("Yes, I Want to Restore " ++ node.account), (SubmitRestore node) ))
-                    (Just ( "Cancel", CancelRestore ))
+                ]
+                (Just ( "Yes, I Want to Restore " ++ node.account, SubmitRestore node ))
+                (Just ( "Cancel", CancelRestore ))
 
         _ ->
             text ""
@@ -318,27 +279,23 @@ restoreConfirmationModal model =
 topMenu : Model -> Html Msg
 topMenu model =
     let
-        ( welcomeMsg, logButton ) =
+        logButton =
             if not (String.isEmpty model.user.token) then
-                ( text ("Welcome, " ++ model.user.userName)
-                , a
+                a
                     [ class "navbar-item help-button"
                     , onClick Logout
                     ]
                     [ span [ class "navbar-item icon is-small" ]
                         [ i [ class "fa fa-2x fa-unlock has-text-danger" ] [] ]
                     ]
-                )
             else
-                ( text ""
-                , a
+                a
                     [ class "navbar-item help-button"
                     , onClick ToggleAdminLoginModal
                     ]
                     [ span [ class "navbar-item icon is-small" ]
                         [ i [ class "fa fa-2x fa-lock has-text-primary" ] [] ]
                     ]
-                )
 
         ( isActiveMonitorClass, isActiveAlertsClass, isActiveSettingsClass ) =
             case model.content of
@@ -436,7 +393,7 @@ topMenu model =
                 , span [] [ text "WINDSHIELD" ]
                 , div [ class "monitor-stats" ]
                     [ monitorConnectionStatus
-                    , p [] [ text ("Last Synched Block: " ++ (toString model.monitorState.lastBlockNum)) ]
+                    , p [] [ text ("Last Synched Block: " ++ toString model.monitorState.lastBlockNum) ]
                     , p [ class "has-text-warning" ]
                         [ text "Current Producer: "
                         , b [] [ text currentProducer ]
@@ -525,7 +482,7 @@ monitorContent model =
             else
                 [ text "" ]
 
-        title =
+        contentTitle =
             if model.showArchivedNodes then
                 "Archived Nodes"
             else
@@ -538,7 +495,7 @@ monitorContent model =
                 nodesList model
     in
         div [ class "content" ]
-            [ titleMenu title menu
+            [ titleMenu contentTitle menu
             , list
             ]
 
@@ -673,13 +630,13 @@ nodeRow model node =
                 Online ->
                     ( "circle"
                     , "has-text-success"
-                    , ("[" ++ (toString node.pingMs) ++ "ms]")
+                    , "[" ++ toString node.pingMs ++ "ms]"
                     )
 
                 UnsynchedBlocks ->
                     ( "circle"
                     , "has-text-warning"
-                    , ("[Unsync]")
+                    , "[Unsync]"
                     )
 
                 Offline ->
@@ -690,7 +647,7 @@ nodeRow model node =
 
         status =
             span [ class className ]
-                [ (icon iconName False False)
+                [ icon iconName False False
                 , small [] [ text pingTxt ]
                 ]
 
@@ -725,12 +682,11 @@ nodeRow model node =
                 [ text "" ]
 
         actions =
-            (a
+            a
                 [ onClick (ToggleNodeChainInfoModal (Just node))
                 , title "View Node Chain Info"
                 ]
                 [ icon "info-circle" False False ]
-            )
                 :: loggedActions
 
         ( lastPrdAt, lastPrdBlock, votePercentage ) =

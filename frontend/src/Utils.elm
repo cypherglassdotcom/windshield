@@ -34,7 +34,7 @@ calcTimeDiff timeOld timeNew =
 
 formatPercentage : Float -> String
 formatPercentage num =
-    (format usLocale (num * 100)) ++ "%"
+    format usLocale (num * 100) ++ "%"
 
 
 formatTime : Time.Time -> String
