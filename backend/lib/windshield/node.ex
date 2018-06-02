@@ -193,43 +193,15 @@ defmodule Windshield.Node do
   end
 
   def handle_cast(:ping, state) do
-    start = System.os_time()
 
-    {info_body, ping, error} =
-      case EosApi.get_chain_info(state.url) do
-        {:ok, body} ->
-          ping = System.os_time() - start
-          {body, ping, nil}
+    {info_body, ping, error} = ping_info(state)
 
-        {:error, err} ->
-          error = "#{state.name} >>> Fail to get #{state.url} CHAIN INFO\n #{inspect(err)}"
-          Logger.error(error)
-          {state.last_info, -1, error}
-      end
+    new_ping_stats = calc_ping_stats(state, ping)
 
-    ping_stats = state.ping_stats
-
-    {ping_total_failures, last_success_ping_at, ping_failures_since_last_success} =
-      if ping < 0 do
-        {ping_stats.ping_total_failures + 1, ping_stats.last_success_ping_at,
-         ping_stats.ping_failures_since_last_success + 1}
-      else
-        {ping_stats.ping_total_failures, System.os_time(), 0}
-      end
-
-    new_ping_stats = %{
-      ping_stats
-      | ping_ms: ping,
-        ping_total_requests: state.ping_stats.ping_total_requests + 1,
-        ping_total_failures: ping_total_failures,
-        ping_failures_since_last_success: ping_failures_since_last_success,
-        last_success_ping_at: last_success_ping_at
-    }
-
-    # last_success_ping_diff = System.os_time() - last_success_ping_at
+    ping_failures = new_ping_stats.ping_failures_since_last_success
 
     {status, last_alert} =
-      if ping < 0 && ping_failures_since_last_success > state.settings["failed_pings_to_alert"] do
+      if ping < 0 && ping_failures > state.settings["failed_pings_to_alert"] do
         last_ping_alert =
           broadcast_ping_alert(
             state.settings["same_alert_interval_mins"],
@@ -326,6 +298,42 @@ defmodule Windshield.Node do
       end
 
     {:reply, {status, response_body}, state}
+  end
+
+  def calc_ping_stats(state, ping) do
+    ping_stats = state.ping_stats
+
+    {ping_total_failures, last_success_ping_at, ping_failures_since_last_success} =
+      if ping < 0 do
+        {ping_stats.ping_total_failures + 1, ping_stats.last_success_ping_at,
+         ping_stats.ping_failures_since_last_success + 1}
+      else
+        {ping_stats.ping_total_failures, System.os_time(), 0}
+      end
+
+    %{
+      ping_stats
+      | ping_ms: ping,
+        ping_total_requests: state.ping_stats.ping_total_requests + 1,
+        ping_total_failures: ping_total_failures,
+        ping_failures_since_last_success: ping_failures_since_last_success,
+        last_success_ping_at: last_success_ping_at
+    }
+  end
+
+  def ping_info(state) do
+    start = System.os_time()
+
+    case EosApi.get_chain_info(state.url) do
+      {:ok, body} ->
+        ping = System.os_time() - start
+        {body, ping, nil}
+
+      {:error, err} ->
+        error = "#{state.name} >>> Fail to get #{state.url} CHAIN INFO\n #{inspect(err)}"
+        Logger.error(error)
+        {state.last_info, -1, error}
+    end
   end
 
   def broadcast_ping_alert(

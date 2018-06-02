@@ -76,6 +76,8 @@ initialModel =
     , showArchivedNodes = False
     , showAdminLogin = False
     , showArchiveConfirmation = False
+    , showRestoreConfirmation = False
+    , showNodeChainInfo = False
     , adminPassword = ""
     , user = User "" "" 0
     , socketServer = ""
@@ -92,7 +94,6 @@ initialModel =
     , monitorConnected = False
     , monitorState = MonitorState InitialMonitor 0
     , nodeForm = newNode
-    , showNodeChainInfo = False
     , viewingNode = Nothing
     , chainInfo = Nothing
     , settings = Settings "" 0 0 0 0 0 0 0
@@ -699,6 +700,11 @@ update msg model =
             , Cmd.none
             )
 
+        ShowRestoreConfirmationModal node ->
+            ( { model | viewingNode = Just node, showRestoreConfirmation = True }
+            , Cmd.none
+            )
+
         CancelArchive ->
             ( { model | viewingNode = Nothing, showArchiveConfirmation = False }
             , Cmd.none
@@ -708,6 +714,18 @@ update msg model =
             let
                 ( newModel, cmd ) =
                     submitArchive model node True
+            in
+                ( { newModel | isLoading = (model.isLoading + 1) }, cmd )
+
+        CancelRestore ->
+            ( { model | viewingNode = Nothing, showRestoreConfirmation = False }
+            , Cmd.none
+            )
+
+        SubmitRestore node ->
+            let
+                ( newModel, cmd ) =
+                    submitArchive model node False
             in
                 ( { newModel | isLoading = (model.isLoading + 1) }, cmd )
 

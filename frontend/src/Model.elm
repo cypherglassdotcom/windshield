@@ -142,6 +142,8 @@ type alias Model =
     , showArchivedNodes : Bool
     , showAdminLogin : Bool
     , showArchiveConfirmation : Bool
+    , showRestoreConfirmation : Bool
+    , showNodeChainInfo : Bool
     , adminPassword : String
     , user : User
     , socketServer : String
@@ -163,7 +165,6 @@ type alias Model =
     , nodeForm : Node
     , chainInfo : Maybe ChainInfo
     , viewingNode : Maybe Node
-    , showNodeChainInfo : Bool
     , alerts : List Alert
     }
 
@@ -224,7 +225,10 @@ type Msg
     | UpdateNodeFormType String
     | SubmitNode
     | ShowArchiveConfirmationModal Node
+    | ShowRestoreConfirmationModal Node
     | CancelArchive
     | SubmitArchive Node
+    | CancelRestore
+    | SubmitRestore Node
     | NoOp
     | NoOpStr String

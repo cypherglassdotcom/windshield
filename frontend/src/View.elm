@@ -270,6 +270,31 @@ archiveConfirmationModal model =
             text ""
 
 
+restoreConfirmationModal : Model -> Html Msg
+restoreConfirmationModal model =
+    case model.viewingNode of
+        Just node ->
+            let
+                modalClass =
+                    if model.showHelp then
+                        "modal is-active"
+                    else
+                        "modal"
+            in
+                modalCard model.isLoading
+                    ("Restore Node " ++ node.account)
+                    CancelRestore
+                    [ div [ class "content" ]
+                        [ p [] [ text ("Are you sure that you want to restore the node " ++ node.account ++ "?") ]
+                        ]
+                    ]
+                    (Just ( ("Yes, I Want to Restore " ++ node.account), (SubmitRestore node) ))
+                    (Just ( "Cancel", CancelRestore ))
+
+        _ ->
+            text ""
+
+
 topMenu : Model -> Html Msg
 topMenu model =
     let
@@ -591,7 +616,10 @@ archivedNodeRow : Node -> Html Msg
 archivedNodeRow node =
     let
         actions =
-            [ a [ onClick ToggleArchivedNodes ]
+            [ a [ onClick (ToggleNodeModal (Just node)) ]
+                [ icon "pencil" False False
+                ]
+            , a [ onClick (ShowRestoreConfirmationModal node) ]
                 [ icon "undo" False False ]
             ]
     in
@@ -845,6 +873,8 @@ view model =
                 nodeModal model
             else if model.showArchiveConfirmation then
                 archiveConfirmationModal model
+            else if model.showRestoreConfirmation then
+                restoreConfirmationModal model
             else if model.showNodeChainInfo then
                 nodeChainInfoModal model
             else if model.showAdminLogin then

@@ -198,14 +198,12 @@ defmodule WindshieldWeb.MonitorChannel do
         },
         socket
       ) do
-
     # authenticate user
     {:ok, _user} = SystemAuth.verify(socket, token)
 
     with {:ok, state} <- PrincipalMonitor.get_state(),
          true <- state.principal_node != String.to_atom(account),
          {:ok, node} <- Database.archive_restore_node(account, is_archived) do
-
       if state.principal_node != nil do
         PrincipalMonitor.respawn_node(node)
       end
@@ -214,8 +212,13 @@ defmodule WindshieldWeb.MonitorChannel do
     else
       _ ->
         Logger.info("archive_restore_node_fail")
-        push(socket, "archive_restore_node_fail", %{error: "Fail to archive/restore node - you cannot archive your principal node"})
+
+        push(socket, "archive_restore_node_fail", %{
+          error: "Fail to archive/restore node - you cannot archive your principal node"
+        })
     end
+
+    {:noreply, socket}
   end
 
   def handle_out("tick_stats", stats, socket) do
