@@ -1,8 +1,8 @@
-port module Components exposing (..)
+module Components exposing (..)
 
 import Html exposing (..)
-import Html.Attributes exposing (attribute, class, defaultValue, href, placeholder, target, type_, value, src, colspan)
-import Html.Events exposing (onClick, onInput, onWithOptions)
+import Html.Attributes exposing (attribute, class, defaultValue, placeholder, type_, value)
+import Html.Events exposing (onClick, onInput)
 import Model exposing (Msg(NoOpStr))
 
 
@@ -60,7 +60,7 @@ icon icon spin isLeft =
 loadingIcon : Int -> Html msg
 loadingIcon isLoading =
     if isLoading > 0 then
-        icon "spinner" True False
+        icon "circle-o-notch" True False
     else
         text ""
 
@@ -98,7 +98,7 @@ basicFieldInput isLoading fieldLabel fieldValue fieldPlaceHolder fieldIcon field
 
         field =
             if readOnly then
-                div [ class ("field-read") ] [ text fieldValue ]
+                div [ class "field-read" ] [ text fieldValue ]
             else
                 div
                     [ class
@@ -181,6 +181,42 @@ selectInput isLoading optionsType fieldLabel fieldValue fieldIcon fieldMsg =
                     ]
                 , icon fieldIcon False True
                 ]
+            ]
+
+
+checkBoxInput : Int -> String -> String -> Bool -> msg -> Bool -> Html msg
+checkBoxInput isLoading fieldLabel fieldPlaceHolder isChecked checkMsg readOnly =
+    let
+        loadingClass =
+            if isLoading > 0 then
+                " is-loading"
+            else
+                ""
+
+        ( valueTxt, inputClass ) =
+            if isChecked then
+                ( "On", " is-success" )
+            else
+                ( "Off", " is-danger" )
+
+        checkTag =
+            div [ class ("tags has-addons" ++ loadingClass) ]
+                [ span [ class ("tag is-medium" ++ inputClass) ]
+                    [ text valueTxt ]
+                , span [ class "tag is-medium" ]
+                    [ text fieldPlaceHolder ]
+                ]
+
+        content =
+            if isLoading == 0 && not readOnly then
+                a [ onClick checkMsg ] [ checkTag ]
+            else
+                checkTag
+    in
+        div [ class "field" ]
+            [ label [ class "label" ]
+                [ text fieldLabel ]
+            , content
             ]
 
 

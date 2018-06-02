@@ -2,12 +2,11 @@ module View exposing (..)
 
 import Model exposing (..)
 import Html exposing (..)
-import Html.Attributes exposing (attribute, class, defaultValue, href, placeholder, target, type_, value, src, colspan)
-import Html.Events exposing (onClick, onInput, onWithOptions)
+import Html.Attributes exposing (attribute, class, href, target, src, colspan, title)
+import Html.Events exposing (onClick, onWithOptions)
 import Components exposing (..)
 import Utils exposing (..)
 import Json.Decode as JD
-import Update exposing (nodeTypeTxt, nodeAddressLink, nodeAddress)
 
 
 notification : Notification -> Html Msg
@@ -42,64 +41,89 @@ notificationsView model =
 nodeModal : Model -> Html Msg
 nodeModal model =
     let
-        modalClass =
-            if model.showNode then
-                "modal is-active"
-            else
-                "modal"
-
         node =
             model.nodeForm
 
         ( submitButton, cancelButton ) =
-            ( (Just ( "Submit", SubmitNode ))
-            , (Just ( "Cancel", (ToggleNodeModal Nothing) ))
+            ( Just ( "Submit", SubmitNode )
+            , Just ( "Cancel", ToggleNodeModal Nothing )
             )
 
-        title =
+        modalTitle =
             if node.isNew then
                 "Create a New Node"
             else
                 "Editing Node"
     in
         modalCard model.isLoading
-            title
+            modalTitle
             (ToggleNodeModal Nothing)
             [ form []
-                [ fieldInput
-                    model.isLoading
-                    "Account"
-                    node.account
-                    "cypherglass1"
-                    "user"
-                    UpdateNodeFormAccount
-                    (not node.isNew)
-                , fieldInput
-                    model.isLoading
-                    "IP"
-                    node.ip
-                    "127.0.0.1"
-                    "server"
-                    UpdateNodeFormIp
-                    False
-                , fieldInput
-                    model.isLoading
-                    "Port"
-                    (toString node.addrPort)
-                    "8888"
-                    "lock"
-                    UpdateNodeFormPort
-                    False
-                , selectInput
-                    model.isLoading
-                    [ ( "BP", "BP - Block Producer" )
-                    , ( "FN", "FN - Full Node" )
-                    , ( "EBP", "EBP - External Block Producer" )
+                [ columns False
+                    [ fieldInput
+                        model.isLoading
+                        "Account"
+                        node.account
+                        "cypherglass1"
+                        "user"
+                        UpdateNodeFormAccount
+                        (not node.isNew)
+                    , text ""
                     ]
-                    "Node Type"
-                    (nodeTypeTxt node.nodeType)
-                    "globe"
-                    UpdateNodeFormType
+                , columns False
+                    [ fieldInput
+                        model.isLoading
+                        "IP"
+                        node.ip
+                        "127.0.0.1"
+                        "server"
+                        UpdateNodeFormIp
+                        False
+                    , fieldInput
+                        model.isLoading
+                        "Port"
+                        (toString node.addrPort)
+                        "8888"
+                        "lock"
+                        UpdateNodeFormPort
+                        False
+                    ]
+                , columns False
+                    [ checkBoxInput
+                        model.isLoading
+                        "SSL"
+                        "Above Address is HTTPS"
+                        node.isSsl
+                        UpdateNodeFormIsSsl
+                        False
+                    , checkBoxInput
+                        model.isLoading
+                        "Alerts"
+                        "Watch and Receive Alerts"
+                        node.isWatchable
+                        UpdateNodeFormIsWatchable
+                        False
+                    ]
+                , columns False
+                    [ selectInput
+                        model.isLoading
+                        [ ( "BP", "BP - Block Producer" )
+                        , ( "FN", "FN - Full Node" )
+                        , ( "EBP", "EBP - External Nodes / Block Producers" )
+                        ]
+                        "Node Type"
+                        (nodeTypeTxt node.nodeType)
+                        "globe"
+                        UpdateNodeFormType
+                    , fieldInput
+                        model.isLoading
+                        "Dashboard Position Order"
+                        (toString node.position)
+                        "1"
+                        "trophy"
+                        UpdateNodeFormPosition
+                        False
+                    ]
                 ]
             ]
             submitButton
@@ -109,13 +133,7 @@ nodeModal model =
 nodeChainInfoModal : Model -> Html Msg
 nodeChainInfoModal model =
     let
-        modalClass =
-            if model.showNodeChainInfo then
-                "modal is-active"
-            else
-                "modal"
-
-        ( title, content ) =
+        ( modalTitle, content ) =
             case model.viewingNode of
                 Just node ->
                     ( "Node " ++ node.account ++ " Chain Info"
@@ -167,7 +185,7 @@ nodeChainInfoModal model =
                     ( "Loading Node Chain Info", [ text "Loading Node" ] )
     in
         modalCard model.isLoading
-            title
+            modalTitle
             (ToggleNodeChainInfoModal Nothing)
             [ form [] content ]
             Nothing
@@ -177,15 +195,9 @@ nodeChainInfoModal model =
 adminLoginModal : Model -> Html Msg
 adminLoginModal model =
     let
-        modalClass =
-            if model.showAdminLogin then
-                "modal is-active"
-            else
-                "modal"
-
         ( submitButton, cancelButton ) =
-            ( (Just ( "Submit", SubmitAdminLogin ))
-            , (Just ( "Cancel", ToggleAdminLoginModal ))
+            ( Just ( "Submit", SubmitAdminLogin )
+            , Just ( "Cancel", ToggleAdminLoginModal )
             )
     in
         modalCard model.isLoading
@@ -212,59 +224,45 @@ adminLoginModal model =
 
 helpModal : Model -> Html Msg
 helpModal model =
-    let
-        modalClass =
-            if model.showHelp then
-                "modal is-active"
-            else
-                "modal"
-    in
-        modalCard model.isLoading
-            "Cypherglass WINDSHIELD - Help/About"
-            ToggleHelp
-            [ div [ class "content" ]
-                [ p [] [ text "Cypherglass WINDSHIELD is a smart tracker of all your nodes: active block producers, full nodes and also external nodes of the EOS chain." ]
-                , h3 [] [ text "Nodes Types:" ]
-                , ul []
-                    [ li []
-                        [ b [] [ text "BlockProducer: " ]
-                        , text "This is your main EOS Block Producer, you will set this one as the principal node. It's used to query the head block number and as comparison base to other nodes, also you want to keep track of the voting rank of this BP Node account (WINDSHIELD automatically alert you)."
-                        ]
-                    , li []
-                        [ b [] [ text "FullNode: " ]
-                        , text "These are your full nodes that you usually publish to the world. WINDSHIELD automatically check if it's healthy and synced to your principal block producer node."
-                        ]
-                    , li []
-                        [ b [] [ text "ExternalNode: " ]
-                        , text "These are external Key Nodes that WINDSHIELD keep track for you to see if your BlockProducer is aligned to them or if it's being forked somehow. You need to always update WINDSHIELD with the top 21 block producers public nodes - WINDSHIELD alerts you in case new producers went up to the voting rank."
-                        ]
+    modalCard model.isLoading
+        "Cypherglass WINDSHIELD - Help/About"
+        ToggleHelp
+        [ div [ class "content" ]
+            [ p [] [ text "Cypherglass WINDSHIELD is a smart tracker of all your nodes: active block producers, full nodes and also external nodes of the EOS chain." ]
+            , h3 [] [ text "Nodes Types:" ]
+            , ul []
+                [ li []
+                    [ b [] [ text "BlockProducer: " ]
+                    , text "This is your main EOS Block Producer, you will set this one as the principal node. It's used to query the head block number and as comparison base to other nodes, also you want to keep track of the voting rank of this BP Node account (WINDSHIELD automatically alert you)."
+                    ]
+                , li []
+                    [ b [] [ text "FullNode: " ]
+                    , text "These are your full nodes that you usually publish to the world. WINDSHIELD automatically check if it's healthy and synced to your principal block producer node."
+                    ]
+                , li []
+                    [ b [] [ text "ExternalNode: " ]
+                    , text "These are external Key Nodes that WINDSHIELD keep track for you to see if your BlockProducer is aligned to them or if it's being forked somehow. You need to always update WINDSHIELD with the top 21 block producers public nodes - WINDSHIELD alerts you in case new producers went up to the voting rank."
                     ]
                 ]
             ]
-            Nothing
-            Nothing
+        ]
+        Nothing
+        Nothing
 
 
 archiveConfirmationModal : Model -> Html Msg
 archiveConfirmationModal model =
     case model.viewingNode of
         Just node ->
-            let
-                modalClass =
-                    if model.showHelp then
-                        "modal is-active"
-                    else
-                        "modal"
-            in
-                modalCard model.isLoading
-                    ("Archive Node " ++ node.account)
-                    CancelArchive
-                    [ div [ class "content" ]
-                        [ p [] [ text ("Are you sure that you want to archive the node " ++ node.account ++ "?") ]
-                        ]
+            modalCard model.isLoading
+                ("Archive Node " ++ node.account)
+                CancelArchive
+                [ div [ class "content" ]
+                    [ p [] [ text ("Are you sure that you want to archive the node " ++ node.account ++ "?") ]
                     ]
-                    (Just ( ("Yes, I Want to Archive " ++ node.account), (SubmitArchive node) ))
-                    (Just ( "Cancel", CancelArchive ))
+                ]
+                (Just ( "Yes, I Want to Archive " ++ node.account, SubmitArchive node ))
+                (Just ( "Cancel", CancelArchive ))
 
         _ ->
             text ""
@@ -274,22 +272,15 @@ restoreConfirmationModal : Model -> Html Msg
 restoreConfirmationModal model =
     case model.viewingNode of
         Just node ->
-            let
-                modalClass =
-                    if model.showHelp then
-                        "modal is-active"
-                    else
-                        "modal"
-            in
-                modalCard model.isLoading
-                    ("Restore Node " ++ node.account)
-                    CancelRestore
-                    [ div [ class "content" ]
-                        [ p [] [ text ("Are you sure that you want to restore the node " ++ node.account ++ "?") ]
-                        ]
+            modalCard model.isLoading
+                ("Restore Node " ++ node.account)
+                CancelRestore
+                [ div [ class "content" ]
+                    [ p [] [ text ("Are you sure that you want to restore the node " ++ node.account ++ "?") ]
                     ]
-                    (Just ( ("Yes, I Want to Restore " ++ node.account), (SubmitRestore node) ))
-                    (Just ( "Cancel", CancelRestore ))
+                ]
+                (Just ( "Yes, I Want to Restore " ++ node.account, SubmitRestore node ))
+                (Just ( "Cancel", CancelRestore ))
 
         _ ->
             text ""
@@ -298,27 +289,23 @@ restoreConfirmationModal model =
 topMenu : Model -> Html Msg
 topMenu model =
     let
-        ( welcomeMsg, logButton ) =
+        logButton =
             if not (String.isEmpty model.user.token) then
-                ( text ("Welcome, " ++ model.user.userName)
-                , a
+                a
                     [ class "navbar-item help-button"
                     , onClick Logout
                     ]
                     [ span [ class "navbar-item icon is-small" ]
                         [ i [ class "fa fa-2x fa-unlock has-text-danger" ] [] ]
                     ]
-                )
             else
-                ( text ""
-                , a
+                a
                     [ class "navbar-item help-button"
                     , onClick ToggleAdminLoginModal
                     ]
                     [ span [ class "navbar-item icon is-small" ]
                         [ i [ class "fa fa-2x fa-lock has-text-primary" ] [] ]
                     ]
-                )
 
         ( isActiveMonitorClass, isActiveAlertsClass, isActiveSettingsClass ) =
             case model.content of
@@ -416,7 +403,7 @@ topMenu model =
                 , span [] [ text "WINDSHIELD" ]
                 , div [ class "monitor-stats" ]
                     [ monitorConnectionStatus
-                    , p [] [ text ("Last Synched Block: " ++ (toString model.monitorState.lastBlockNum)) ]
+                    , p [] [ text ("Last Synched Block: " ++ toString model.monitorState.lastBlockNum) ]
                     , p [ class "has-text-warning" ]
                         [ text "Current Producer: "
                         , b [] [ text currentProducer ]
@@ -505,7 +492,7 @@ monitorContent model =
             else
                 [ text "" ]
 
-        title =
+        contentTitle =
             if model.showArchivedNodes then
                 "Archived Nodes"
             else
@@ -518,7 +505,7 @@ monitorContent model =
                 nodesList model
     in
         div [ class "content" ]
-            [ titleMenu title menu
+            [ titleMenu contentTitle menu
             , list
             ]
 
@@ -550,6 +537,7 @@ nodesList model =
             if List.length nodes > 0 then
                 nodes
                     |> List.filter (\n -> not n.isArchived)
+                    |> List.sortBy .position
                     |> List.map (\n -> nodeRow model n)
             else
                 [ tr []
@@ -616,10 +604,16 @@ archivedNodeRow : Node -> Html Msg
 archivedNodeRow node =
     let
         actions =
-            [ a [ onClick (ToggleNodeModal (Just node)) ]
+            [ a
+                [ onClick (ToggleNodeModal (Just node))
+                , title "Edit Node"
+                ]
                 [ icon "pencil" False False
                 ]
-            , a [ onClick (ShowRestoreConfirmationModal node) ]
+            , a
+                [ onClick (ShowRestoreConfirmationModal node)
+                , title "Restore Node"
+                ]
                 [ icon "undo" False False ]
             ]
     in
@@ -647,13 +641,13 @@ nodeRow model node =
                 Online ->
                     ( "circle"
                     , "has-text-success"
-                    , ("[" ++ (toString node.pingMs) ++ "ms]")
+                    , "[" ++ toString node.pingMs ++ "ms]"
                     )
 
                 UnsynchedBlocks ->
                     ( "circle"
                     , "has-text-warning"
-                    , ("[Unsync]")
+                    , "[Unsync]"
                     )
 
                 Offline ->
@@ -664,7 +658,7 @@ nodeRow model node =
 
         status =
             span [ class className ]
-                [ (icon iconName False False)
+                [ icon iconName False False
                 , small [] [ text pingTxt ]
                 ]
 
@@ -682,10 +676,16 @@ nodeRow model node =
 
         loggedActions =
             if isLogged then
-                [ a [ onClick (ToggleNodeModal (Just node)) ]
+                [ a
+                    [ onClick (ToggleNodeModal (Just node))
+                    , title "Edit Node"
+                    ]
                     [ icon "pencil" False False
                     ]
-                , a [ onClick (ShowArchiveConfirmationModal node) ]
+                , a
+                    [ onClick (ShowArchiveConfirmationModal node)
+                    , title "Archive Node"
+                    ]
                     [ icon "archive" False False
                     ]
                 ]
@@ -693,9 +693,11 @@ nodeRow model node =
                 [ text "" ]
 
         actions =
-            (a [ onClick (ToggleNodeChainInfoModal (Just node)) ]
+            a
+                [ onClick (ToggleNodeChainInfoModal (Just node))
+                , title "View Node Chain Info"
+                ]
                 [ icon "info-circle" False False ]
-            )
                 :: loggedActions
 
         ( lastPrdAt, lastPrdBlock, votePercentage ) =
@@ -710,15 +712,32 @@ nodeRow model node =
                     ( "--", "--", "--" )
 
                 ExternalBlockProducer ->
-                    ( "--"
-                    , "--"
+                    ( calcTimeDiff node.lastProducedBlockAt model.currentTime
+                    , toString node.lastProducedBlock
                     , formatPercentage node.votePercentage
                     )
+
+        alertIcon =
+            if node.isWatchable then
+                small
+                    [ class "has-text-primary"
+                    , title "Alerts ON"
+                    ]
+                    [ icon "bell" False False ]
+            else
+                small
+                    [ class "has-text-grey-light"
+                    , title "Alerts OFF"
+                    ]
+                    [ icon "bell-o" False False ]
     in
         tr [ class producerClass ]
             [ td [] actions
             , td []
-                [ text node.account
+                [ alertIcon
+                , small [ class "node-position" ]
+                    [ text (toString node.position ++ ". ") ]
+                , text node.account
                 ]
             , td []
                 [ a
@@ -755,14 +774,24 @@ settingsContent model =
                 "Settings"
                 editButton
             , form []
-                [ fieldInput
-                    model.isLoading
-                    "Principal Node Account"
-                    settings.principalNode
-                    "cypherglass1"
-                    "server"
-                    UpdateSettingsFormPrincipalNode
-                    (not model.editSettingsForm)
+                [ columns False
+                    [ fieldInput
+                        model.isLoading
+                        "Principal Block Producer EOS Account"
+                        settings.principalNode
+                        "cypherglass1"
+                        "server"
+                        UpdateSettingsFormPrincipalNode
+                        (not model.editSettingsForm)
+                    , fieldInput
+                        model.isLoading
+                        "Do Not Repeat Same Error for Interval Minutes"
+                        (toString settings.sameAlertIntervalMins)
+                        "500"
+                        "clock-o"
+                        UpdateSettingsFormSameAlertIntervalMins
+                        (not model.editSettingsForm)
+                    ]
                 , div [ class "columns" ]
                     [ div [ class "column" ]
                         [ fieldInput
@@ -787,7 +816,7 @@ settingsContent model =
                     , div [ class "column" ]
                         [ fieldInput
                             model.isLoading
-                            "Calculate Votes Loop Interval (secs)"
+                            "Voting and Nodes Report Interval (secs)"
                             (toString settings.calcVotesIntervalSecs)
                             "300"
                             "clock-o"
@@ -795,47 +824,31 @@ settingsContent model =
                             (not model.editSettingsForm)
                         ]
                     ]
-                , div [ class "columns" ]
-                    [ div [ class "column" ]
-                        [ fieldInput
-                            model.isLoading
-                            "Same Error Alert Interval (minutes)"
-                            (toString settings.sameAlertIntervalMins)
-                            "500"
-                            "clock-o"
-                            UpdateSettingsFormSameAlertIntervalMins
-                            (not model.editSettingsForm)
-                        ]
-                    , div [ class "column" ]
-                        [ fieldInput
-                            model.isLoading
-                            "Block Production Idle Seconds to emit an Alert"
-                            (toString settings.bpToleranceTimeSecs)
-                            "180"
-                            "bell"
-                            UpdateSettingsFormBpToleranceTimeSecs
-                            (not model.editSettingsForm)
-                        ]
-                    , div [ class "column" ]
-                        [ fieldInput
-                            model.isLoading
-                            "Unsynched Blocks to emit an Alert"
-                            (toString settings.unsynchedBlocksToAlert)
-                            "20"
-                            "bell"
-                            UpdateSettingsFormUnsynchedBlocksToAlert
-                            (not model.editSettingsForm)
-                        ]
-                    , div [ class "column" ]
-                        [ fieldInput
-                            model.isLoading
-                            "Failed Pings to emit an Alert"
-                            (toString settings.failedPingsToAlert)
-                            "20"
-                            "bell"
-                            UpdateSettingsFormFailedPingsToAlert
-                            (not model.editSettingsForm)
-                        ]
+                , columns False
+                    [ fieldInput
+                        model.isLoading
+                        "Block Production Idle Seconds to Alert"
+                        (toString settings.bpToleranceTimeSecs)
+                        "180"
+                        "bell"
+                        UpdateSettingsFormBpToleranceTimeSecs
+                        (not model.editSettingsForm)
+                    , fieldInput
+                        model.isLoading
+                        "Unsynched Blocks to emit an Alert"
+                        (toString settings.unsynchedBlocksToAlert)
+                        "20"
+                        "bell"
+                        UpdateSettingsFormUnsynchedBlocksToAlert
+                        (not model.editSettingsForm)
+                    , fieldInput
+                        model.isLoading
+                        "Failed Pings to emit an Alert"
+                        (toString settings.failedPingsToAlert)
+                        "20"
+                        "bell"
+                        UpdateSettingsFormFailedPingsToAlert
+                        (not model.editSettingsForm)
                     ]
                 , footer
                 ]

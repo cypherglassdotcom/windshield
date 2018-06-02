@@ -91,6 +91,7 @@ type alias Node =
     , nodeType : NodeType
     , votePercentage : Float
     , isArchived : Bool
+    , position : Int
     , isNew : Bool
     }
 
@@ -171,7 +172,7 @@ type alias Model =
 
 newNode : Node
 newNode =
-    Node "" "" 8888 False True Initial 0 0 0.0 0 0.0 BlockProducer 0.0 False True
+    Node "" "" 8888 False True Initial 0 0 0.0 0 0.0 BlockProducer 0.0 False 1 True
 
 
 type Msg
@@ -223,6 +224,9 @@ type Msg
     | UpdateNodeFormIp String
     | UpdateNodeFormPort String
     | UpdateNodeFormType String
+    | UpdateNodeFormPosition String
+    | UpdateNodeFormIsWatchable
+    | UpdateNodeFormIsSsl
     | SubmitNode
     | ShowArchiveConfirmationModal Node
     | ShowRestoreConfirmationModal Node

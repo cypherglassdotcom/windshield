@@ -1,5 +1,6 @@
 module Utils exposing (..)
 
+import Model exposing (..)
 import Date.Extra.Format as DateFormat
 import Date.Extra.Config.Config_en_us as DateConfig
 import Date.Distance as Distance
@@ -33,7 +34,7 @@ calcTimeDiff timeOld timeNew =
 
 formatPercentage : Float -> String
 formatPercentage num =
-    (format usLocale (num * 100)) ++ "%"
+    format usLocale (num * 100) ++ "%"
 
 
 formatTime : Time.Time -> String
@@ -58,3 +59,33 @@ reversedComparison a b =
 
         GT ->
             LT
+
+
+nodeAddressLink : Node -> String
+nodeAddressLink node =
+    let
+        prefix =
+            if node.isSsl then
+                "https://"
+            else
+                "http://"
+    in
+        prefix ++ node.ip ++ ":" ++ toString node.addrPort ++ "/v1/chain/get_info"
+
+
+nodeAddress : Node -> String
+nodeAddress node =
+    node.ip ++ ":" ++ toString node.addrPort
+
+
+nodeTypeTxt : NodeType -> String
+nodeTypeTxt nodeType =
+    case nodeType of
+        BlockProducer ->
+            "BP"
+
+        FullNode ->
+            "FN"
+
+        ExternalBlockProducer ->
+            "EBP"

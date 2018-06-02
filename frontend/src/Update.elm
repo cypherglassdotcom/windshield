@@ -1,16 +1,11 @@
 port module Update exposing (..)
 
 import Model exposing (..)
-import Date
-import Date.Extra.Core as Core
+import Handlers exposing (..)
+import Decoders exposing (..)
 import Time
 import Phoenix.Socket
-import Phoenix.Channel
-import Phoenix.Push
-import Json.Encode as JE
 import Json.Decode as JD
-import Json.Decode.Pipeline as JDP
-import Http
 
 
 -- Ports and Subscriptions
@@ -23,6 +18,14 @@ port signedIn : JD.Value -> Cmd msg
 
 
 port playSound : () -> Cmd msg
+
+
+audioCmd : Bool -> Cmd Msg
+audioCmd isMuted =
+    if isMuted then
+        Cmd.none
+    else
+        playSound ()
 
 
 subscriptions : Model -> Sub Msg
@@ -209,8 +212,8 @@ update msg model =
                     in
                         ( { model | monitorState = newMonitorState }, Cmd.none )
 
-                Err err ->
-                    Debug.log err ( model, Cmd.none )
+                Err _ ->
+                    ( model, Cmd.none )
 
         ReceiveNodes raw ->
             case JD.decodeValue nodesRowsDecoder raw of
@@ -247,7 +250,7 @@ update msg model =
                     ( { model
                         | producers = producers
                         , isLoading = model.isLoading - 1
-                        , nodes = (mergeProductionToNodes model.nodes producers)
+                        , nodes = mergeProductionToNodes model.nodes producers
                       }
                     , Cmd.none
                     )
@@ -298,6 +301,7 @@ update msg model =
                                 :: (model.nodes
                                         |> List.filter (\n -> n.account /= node.account)
                                    )
+                                |> List.sortBy .position
                     in
                         ( { model
                             | isLoading = model.isLoading - 1
@@ -306,6 +310,7 @@ update msg model =
                             , nodeForm = newNode
                             , viewingNode = Nothing
                             , showArchiveConfirmation = False
+                            , showRestoreConfirmation = False
                           }
                         , Cmd.none
                         )
@@ -366,8 +371,11 @@ update msg model =
                                         )
                             else
                                 model.nodes ++ [ node ]
+
+                        sortedNodes =
+                            nodes |> List.sortBy .position
                     in
-                        ( { model | nodes = nodes }, Cmd.none )
+                        ( { model | nodes = sortedNodes }, Cmd.none )
 
                 Err error ->
                     Debug.crash error
@@ -384,14 +392,12 @@ update msg model =
                             Notification (Error alert.description) model.currentTime (toString alert.createdAt)
                                 :: model.notifications
                     in
-                        ( { model | alerts = alerts, notifications = notifications }, (audioCmd model.isMuted) )
+                        ( { model | alerts = alerts, notifications = notifications }
+                        , audioCmd model.isMuted
+                        )
 
-                Err error ->
-                    let
-                        test =
-                            Debug.crash (error)
-                    in
-                        ( model, Cmd.none )
+                Err _ ->
+                    ( model, Cmd.none )
 
         ReceiveProducer raw ->
             case JD.decodeValue producerDecoder raw of
@@ -467,14 +473,14 @@ update msg model =
                     ( { model | viewingNode = Nothing, chainInfo = Nothing, showNodeChainInfo = False }, Cmd.none )
 
         ToggleHelp ->
-            ( { model | showHelp = (not model.showHelp) }, Cmd.none )
+            ( { model | showHelp = not model.showHelp }, Cmd.none )
 
         ToggleArchivedNodes ->
-            ( { model | showArchivedNodes = (not model.showArchivedNodes) }, Cmd.none )
+            ( { model | showArchivedNodes = not model.showArchivedNodes }, Cmd.none )
 
         ToggleAdminLoginModal ->
             ( { model
-                | showAdminLogin = (not model.showAdminLogin)
+                | showAdminLogin = not model.showAdminLogin
                 , adminPassword = ""
               }
             , Cmd.none
@@ -498,12 +504,8 @@ update msg model =
             , signedIn (userEncoder user)
             )
 
-        AuthResponse (Err err) ->
+        AuthResponse (Err _) ->
             let
-                error =
-                    Debug.log ">>>error"
-                        err
-
                 notifications =
                     Notification (Error "Admin Login Failed") model.currentTime "adminLoginFailed"
                         :: model.notifications
@@ -524,7 +526,7 @@ update msg model =
                     ( { model | showNode = False }, Cmd.none )
 
         ToggleSound ->
-            ( { model | isMuted = (not model.isMuted) }, Cmd.none )
+            ( { model | isMuted = not model.isMuted }, Cmd.none )
 
         Logout ->
             ( { model | user = User "" "" 0 }, signOut () )
@@ -532,7 +534,7 @@ update msg model =
         ToggleSettingsForm ->
             ( { model
                 | settingsForm = model.settings
-                , editSettingsForm = (not model.editSettingsForm)
+                , editSettingsForm = not model.editSettingsForm
               }
             , Cmd.none
             )
@@ -643,7 +645,7 @@ update msg model =
                 ( newModel, cmd ) =
                     submitSettings model
             in
-                ( { newModel | isLoading = (model.isLoading + 1) }, cmd )
+                ( { newModel | isLoading = model.isLoading + 1 }, cmd )
 
         UpdateNodeFormAccount str ->
             let
@@ -665,6 +667,26 @@ update msg model =
             in
                 ( { model | nodeForm = newObj }, Cmd.none )
 
+        UpdateNodeFormIsWatchable ->
+            let
+                newForm =
+                    model.nodeForm
+
+                newObj =
+                    { newForm | isWatchable = not newForm.isWatchable }
+            in
+                ( { model | nodeForm = newObj }, Cmd.none )
+
+        UpdateNodeFormIsSsl ->
+            let
+                newForm =
+                    model.nodeForm
+
+                newObj =
+                    { newForm | isSsl = not newForm.isSsl }
+            in
+                ( { model | nodeForm = newObj }, Cmd.none )
+
         UpdateNodeFormPort str ->
             let
                 newForm =
@@ -678,13 +700,26 @@ update msg model =
             in
                 ( { model | nodeForm = newObj }, Cmd.none )
 
+        UpdateNodeFormPosition str ->
+            let
+                newForm =
+                    model.nodeForm
+
+                num =
+                    Result.withDefault newForm.position (String.toInt str)
+
+                newObj =
+                    { newForm | position = num }
+            in
+                ( { model | nodeForm = newObj }, Cmd.none )
+
         UpdateNodeFormType str ->
             let
                 newForm =
                     model.nodeForm
 
                 newObj =
-                    { newForm | nodeType = (nodeTypeFromTxt str) }
+                    { newForm | nodeType = nodeTypeFromTxt str }
             in
                 ( { model | nodeForm = newObj }, Cmd.none )
 
@@ -693,7 +728,7 @@ update msg model =
                 ( newModel, cmd ) =
                     submitNode model
             in
-                ( { newModel | isLoading = (model.isLoading + 1) }, cmd )
+                ( { newModel | isLoading = model.isLoading + 1 }, cmd )
 
         ShowArchiveConfirmationModal node ->
             ( { model | viewingNode = Just node, showArchiveConfirmation = True }
@@ -715,7 +750,7 @@ update msg model =
                 ( newModel, cmd ) =
                     submitArchive model node True
             in
-                ( { newModel | isLoading = (model.isLoading + 1) }, cmd )
+                ( { newModel | isLoading = model.isLoading + 1 }, cmd )
 
         CancelRestore ->
             ( { model | viewingNode = Nothing, showRestoreConfirmation = False }
@@ -727,506 +762,10 @@ update msg model =
                 ( newModel, cmd ) =
                     submitArchive model node False
             in
-                ( { newModel | isLoading = (model.isLoading + 1) }, cmd )
+                ( { newModel | isLoading = model.isLoading + 1 }, cmd )
 
         NoOp ->
             ( model, Cmd.none )
 
         NoOpStr _ ->
             ( model, Cmd.none )
-
-
-
--- Functions
-
-
-submitAdminLogin : Model -> Cmd Msg
-submitAdminLogin model =
-    let
-        url =
-            model.backendServer ++ "/api/auth"
-
-        body =
-            JE.object
-                [ ( "password", JE.string model.adminPassword ) ]
-
-        request =
-            Http.request
-                { method = "POST"
-                , headers = []
-                , url = url
-                , body = Http.jsonBody body
-                , expect = Http.expectJson userDecoder
-                , timeout = Nothing
-                , withCredentials = False
-                }
-
-        cmd =
-            Http.send AuthResponse request
-    in
-        cmd
-
-
-audioCmd : Bool -> Cmd Msg
-audioCmd isMuted =
-    if isMuted then
-        Cmd.none
-    else
-        playSound ()
-
-
-handleReceiveWsError : Model -> JE.Value -> ( Model, Cmd Msg )
-handleReceiveWsError model errMsg =
-    case JD.decodeValue wsErrorDecoder errMsg of
-        Ok str ->
-            let
-                notifications =
-                    Notification (Error str) model.currentTime (toString model.currentTime)
-                        :: model.notifications
-            in
-                ( { model
-                    | notifications = notifications
-                    , isLoading = model.isLoading - 1
-                  }
-                , Cmd.none
-                )
-
-        Err error ->
-            Debug.crash error
-                ( { model | isLoading = model.isLoading - 1 }, Cmd.none )
-
-
-joinChannel : Model -> ( Model, Cmd Msg )
-joinChannel model =
-    let
-        channel =
-            Phoenix.Channel.init "monitor:main"
-                |> Phoenix.Channel.onJoin (always (ShowJoinedMessage "Connected to WINDSHIELD Server"))
-                |> Phoenix.Channel.onClose (always (ShowLeftMessage "WINDSHIELD Server Connection Closed"))
-
-        ( phxSocket, phxCmd ) =
-            Phoenix.Socket.join channel model.phxSocket
-    in
-        ( { model | phxSocket = phxSocket }
-        , Cmd.map PhoenixMsg phxCmd
-        )
-
-
-retrieveMonitorData : Model -> String -> ( Model, Cmd Msg )
-retrieveMonitorData model dataMsg =
-    let
-        push_ =
-            Phoenix.Push.init dataMsg "monitor:main"
-                |> Phoenix.Push.withPayload JE.null
-
-        ( phxSocket, phxCmd ) =
-            Phoenix.Socket.push push_ model.phxSocket
-    in
-        ( { model | phxSocket = phxSocket }
-        , Cmd.map PhoenixMsg phxCmd
-        )
-
-
-submitSettings : Model -> ( Model, Cmd Msg )
-submitSettings model =
-    let
-        push_ =
-            Phoenix.Push.init "update_settings" "monitor:main"
-                |> Phoenix.Push.withPayload
-                    (settingsEncoder model.settingsForm model.user.token)
-
-        ( phxSocket, phxCmd ) =
-            Phoenix.Socket.push push_ model.phxSocket
-    in
-        ( { model | phxSocket = phxSocket }
-        , Cmd.map PhoenixMsg phxCmd
-        )
-
-
-getNodeChainInfo : Model -> String -> ( Model, Cmd Msg )
-getNodeChainInfo model account =
-    let
-        push_ =
-            Phoenix.Push.init "get_node_chain_info" "monitor:main"
-                |> Phoenix.Push.withPayload
-                    (accountEncoder account)
-
-        ( phxSocket, phxCmd ) =
-            Phoenix.Socket.push push_ model.phxSocket
-    in
-        ( { model | phxSocket = phxSocket }
-        , Cmd.map PhoenixMsg phxCmd
-        )
-
-
-submitNode : Model -> ( Model, Cmd Msg )
-submitNode model =
-    let
-        push_ =
-            Phoenix.Push.init "upsert_node" "monitor:main"
-                |> Phoenix.Push.withPayload
-                    (nodeEncoder model.nodeForm model.user.token)
-
-        ( phxSocket, phxCmd ) =
-            Phoenix.Socket.push push_ model.phxSocket
-    in
-        ( { model | phxSocket = phxSocket }
-        , Cmd.map PhoenixMsg phxCmd
-        )
-
-
-submitArchive : Model -> Node -> Bool -> ( Model, Cmd Msg )
-submitArchive model node isArchive =
-    let
-        push_ =
-            Phoenix.Push.init "archive_restore_node" "monitor:main"
-                |> Phoenix.Push.withPayload
-                    (nodeArchiveEncoder model.user.token node.account isArchive)
-
-        ( phxSocket, phxCmd ) =
-            Phoenix.Socket.push push_ model.phxSocket
-    in
-        ( { model | phxSocket = phxSocket }
-        , Cmd.map PhoenixMsg phxCmd
-        )
-
-
-isoStringToDateDecoder : JD.Decoder Float
-isoStringToDateDecoder =
-    JD.string
-        |> JD.andThen
-            (\val ->
-                let
-                    utcStr =
-                        val ++ "Z"
-                in
-                    case Date.fromString utcStr of
-                        Ok date ->
-                            JD.succeed (toFloat (Core.toTime date))
-
-                        Err _ ->
-                            JD.succeed 0
-            )
-
-
-accountEncoder : String -> JE.Value
-accountEncoder account =
-    JE.object
-        [ ( "account", JE.string account )
-        ]
-
-
-wsErrorDecoder : JD.Decoder String
-wsErrorDecoder =
-    JD.at [ "error" ] JD.string
-
-
-statsDecoder : JD.Decoder MonitorState
-statsDecoder =
-    JD.map2
-        MonitorState
-        (JD.field "status" monitorStatusDecoder)
-        (JD.field "last_block" JD.int)
-
-
-userDecoder : JD.Decoder User
-userDecoder =
-    JDP.decode
-        User
-        |> JDP.required "user" JD.string
-        |> JDP.required "token" JD.string
-        |> JDP.hardcoded 0.0
-
-
-chainInfoDataDecoder : JD.Decoder ChainInfoData
-chainInfoDataDecoder =
-    JDP.decode
-        ChainInfoData
-        |> JDP.optional "chain_info"
-            chainInfoDecoder
-            (ChainInfo "" "" 0 0 "" "" 0 "" 0 0 0 0)
-
-
-chainInfoDecoder : JD.Decoder ChainInfo
-chainInfoDecoder =
-    JDP.decode
-        ChainInfo
-        |> JDP.required "server_version" JD.string
-        |> JDP.required "chain_id" JD.string
-        |> JDP.required "head_block_num" JD.int
-        |> JDP.required "last_irreversible_block_num" JD.int
-        |> JDP.required "last_irreversible_block_id" JD.string
-        |> JDP.required "head_block_id" JD.string
-        |> JDP.required "head_block_time" isoStringToDateDecoder
-        |> JDP.required "head_block_producer" JD.string
-        |> JDP.required "virtual_block_cpu_limit" JD.int
-        |> JDP.required "virtual_block_net_limit" JD.int
-        |> JDP.required "block_cpu_limit" JD.int
-        |> JDP.required "block_net_limit" JD.int
-
-
-userEncoder : User -> JE.Value
-userEncoder obj =
-    JE.object
-        [ ( "userName", JE.string obj.userName )
-        , ( "token", JE.string obj.token )
-        , ( "expiration", JE.float obj.expiration )
-        ]
-
-
-alertsRowsDecoder : JD.Decoder (List Alert)
-alertsRowsDecoder =
-    JD.at [ "rows" ] (JD.list alertDecoder)
-
-
-alertDecoder : JD.Decoder Alert
-alertDecoder =
-    let
-        toDecoder alertType description createdAt =
-            JD.succeed (Alert alertType description (createdAt / 1000000))
-    in
-        JDP.decode toDecoder
-            |> JDP.required "type" JD.string
-            |> JDP.required "description" JD.string
-            |> JDP.required "created_at" JD.float
-            |> JDP.resolve
-
-
-nodeEncoder : Node -> String -> JE.Value
-nodeEncoder obj token =
-    JE.object
-        [ ( "account", JE.string obj.account )
-        , ( "token", JE.string token )
-        , ( "ip", JE.string obj.ip )
-        , ( "port", JE.int obj.addrPort )
-        , ( "is_ssl", JE.bool obj.isSsl )
-        , ( "is_watchable", JE.bool obj.isWatchable )
-        , ( "type", JE.string (nodeTypeTxt obj.nodeType) )
-        , ( "is_archived", JE.bool obj.isArchived )
-        ]
-
-
-nodeArchiveEncoder : String -> String -> Bool -> JE.Value
-nodeArchiveEncoder token account isArchived =
-    JE.object
-        [ ( "account", JE.string account )
-        , ( "token", JE.string token )
-        , ( "is_archived", JE.bool isArchived )
-        ]
-
-
-nodeStatusDecoder : JD.Decoder NodeStatus
-nodeStatusDecoder =
-    JD.string
-        |> JD.andThen
-            (\string ->
-                case string of
-                    "initial" ->
-                        JD.succeed Initial
-
-                    "active" ->
-                        JD.succeed Online
-
-                    "unsynched_blocks" ->
-                        JD.succeed UnsynchedBlocks
-
-                    _ ->
-                        JD.succeed Offline
-            )
-
-
-nodeTypeFromTxt : String -> NodeType
-nodeTypeFromTxt str =
-    if str == "BP" then
-        BlockProducer
-    else if str == "FN" then
-        FullNode
-    else
-        ExternalBlockProducer
-
-
-nodeTypeDecoder : JD.Decoder NodeType
-nodeTypeDecoder =
-    JD.string
-        |> JD.andThen
-            (\string ->
-                case string of
-                    "BP" ->
-                        JD.succeed BlockProducer
-
-                    "FN" ->
-                        JD.succeed FullNode
-
-                    _ ->
-                        JD.succeed ExternalBlockProducer
-            )
-
-
-nodeDecoder : JD.Decoder Node
-nodeDecoder =
-    JDP.decode Node
-        |> JDP.required "account" JD.string
-        |> JDP.required "ip" JD.string
-        |> JDP.required "port" JD.int
-        |> JDP.required "is_ssl" JD.bool
-        |> JDP.required "is_watchable" JD.bool
-        |> JDP.optional "status" nodeStatusDecoder Initial
-        |> JDP.optional "ping_ms" JD.int -1
-        |> JDP.optional "head_block_num" JD.int -1
-        |> JDP.optional "last_success_ping_at" JD.float -1
-        |> JDP.optional "last_produced_block" JD.int 0
-        |> JDP.optional "last_produced_block_at" isoStringToDateDecoder 0
-        |> JDP.required "type" nodeTypeDecoder
-        |> JDP.optional "vote_percentage" JD.float 0.0
-        |> JDP.optional "is_archived" JD.bool False
-        |> JDP.hardcoded False
-
-
-nodesRowsDecoder : JD.Decoder (List Node)
-nodesRowsDecoder =
-    JD.at [ "rows" ] (JD.list nodeDecoder)
-
-
-nodesDecoder : JD.Decoder (List Node)
-nodesDecoder =
-    JD.list nodeDecoder
-
-
-producersRowsDecoder : JD.Decoder (List Producer)
-producersRowsDecoder =
-    JD.at [ "rows" ] (JD.list producerDecoder)
-
-
-producersDecoder : JD.Decoder (List Producer)
-producersDecoder =
-    JD.list producerDecoder
-
-
-producerDecoder : JD.Decoder Producer
-producerDecoder =
-    JDP.decode Producer
-        |> JDP.required "account" JD.string
-        |> JDP.required "last_produced_block" JD.int
-        |> JDP.optional "last_produced_block_at" isoStringToDateDecoder 0
-        |> JDP.required "blocks" JD.int
-        |> JDP.required "transactions" JD.int
-
-
-mergeProductionToNodes : List Node -> List Producer -> List Node
-mergeProductionToNodes nodes producers =
-    let
-        mergeNode node =
-            let
-                producer =
-                    producers
-                        |> List.filter (\prd -> prd.account == node.account)
-                        |> List.head
-            in
-                case producer of
-                    Just p ->
-                        { node
-                            | lastProducedBlock = p.lastProducedBlock
-                            , lastProducedBlockAt = p.lastProducedBlockAt
-                        }
-
-                    Nothing ->
-                        node
-    in
-        nodes
-            |> List.map
-                (\node ->
-                    case node.nodeType of
-                        BlockProducer ->
-                            mergeNode node
-
-                        ExternalBlockProducer ->
-                            mergeNode node
-
-                        FullNode ->
-                            node
-                )
-
-
-monitorStatusDecoder : JD.Decoder MonitorStatus
-monitorStatusDecoder =
-    JD.string
-        |> JD.andThen
-            (\string ->
-                case string of
-                    "initial" ->
-                        JD.succeed InitialMonitor
-
-                    "active" ->
-                        JD.succeed Active
-
-                    "syncing" ->
-                        JD.succeed Syncing
-
-                    _ ->
-                        JD.succeed InitialMonitor
-            )
-
-
-monitorStateDecoder : JD.Decoder MonitorState
-monitorStateDecoder =
-    JDP.decode MonitorState
-        |> JDP.required "status" monitorStatusDecoder
-        |> JDP.hardcoded 0
-
-
-settingsDecoder : JD.Decoder Settings
-settingsDecoder =
-    JDP.decode Settings
-        |> JDP.optional "principal_node" JD.string ""
-        |> JDP.required "monitor_loop_interval" JD.int
-        |> JDP.required "node_loop_interval" JD.int
-        |> JDP.required "same_alert_interval_mins" JD.int
-        |> JDP.required "bp_tolerance_time_secs" JD.int
-        |> JDP.required "unsynched_blocks_to_alert" JD.int
-        |> JDP.required "failed_pings_to_alert" JD.int
-        |> JDP.required "calc_votes_interval_secs" JD.int
-
-
-settingsEncoder : Settings -> String -> JE.Value
-settingsEncoder settings token =
-    JE.object
-        [ ( "token", JE.string token )
-        , ( "principal_node", JE.string settings.principalNode )
-        , ( "monitor_loop_interval", JE.int settings.monitorLoopInterval )
-        , ( "node_loop_interval", JE.int settings.nodeLoopInterval )
-        , ( "same_alert_interval_mins", JE.int settings.sameAlertIntervalMins )
-        , ( "bp_tolerance_time_secs", JE.int settings.bpToleranceTimeSecs )
-        , ( "unsynched_blocks_to_alert", JE.int settings.unsynchedBlocksToAlert )
-        , ( "failed_pings_to_alert", JE.int settings.failedPingsToAlert )
-        , ( "calc_votes_interval_secs", JE.int settings.calcVotesIntervalSecs )
-        ]
-
-
-nodeAddressLink : Node -> String
-nodeAddressLink node =
-    let
-        prefix =
-            if node.isSsl then
-                "https://"
-            else
-                "http://"
-    in
-        prefix ++ node.ip ++ ":" ++ toString node.addrPort ++ "/v1/chain/get_info"
-
-
-nodeAddress : Node -> String
-nodeAddress node =
-    node.ip ++ ":" ++ toString node.addrPort
-
-
-nodeTypeTxt : NodeType -> String
-nodeTypeTxt nodeType =
-    case nodeType of
-        BlockProducer ->
-            "BP"
-
-        FullNode ->
-            "FN"
-
-        ExternalBlockProducer ->
-            "EBP"

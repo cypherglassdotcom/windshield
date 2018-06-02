@@ -139,7 +139,8 @@ defmodule WindshieldWeb.MonitorChannel do
           "is_ssl" => is_ssl,
           "is_watchable" => is_watchable,
           "type" => type,
-          "is_archived" => is_archived
+          "is_archived" => is_archived,
+          "position" => position
         },
         socket
       ) do
@@ -171,18 +172,24 @@ defmodule WindshieldWeb.MonitorChannel do
                  is_ssl,
                  is_watchable,
                  type,
-                 is_archived
+                 is_archived,
+                 position
                ),
-             {:ok, state} <- PrincipalMonitor.get_state() do
-          if state.principal_node != nil do
-            PrincipalMonitor.respawn_node(new_node)
-          end
-
+             {:ok, _state} <- PrincipalMonitor.get_state(),
+             :ok <- PrincipalMonitor.respawn_node(new_node) do
           push(socket, "upsert_node", new_node)
         else
           _ ->
             Logger.info("upsert_node_fail")
-            push(socket, "upsert_node_fail", %{error: "Fail to upsert node"})
+
+            push(socket, "upsert_node_fail", %{
+              error: """
+              Fail to upsert node - If your Principal BP is syncing for
+              the first time the server might be busy and can take
+              a while to handle your request. DO NOT RESUBMIT, please refresh
+              the page until your request is done.
+              """
+            })
         end
     end
 
@@ -203,18 +210,21 @@ defmodule WindshieldWeb.MonitorChannel do
 
     with {:ok, state} <- PrincipalMonitor.get_state(),
          true <- state.principal_node != String.to_atom(account),
-         {:ok, node} <- Database.archive_restore_node(account, is_archived) do
-      if state.principal_node != nil do
-        PrincipalMonitor.respawn_node(node)
-      end
-
+         {:ok, node} <- Database.archive_restore_node(account, is_archived),
+         :ok <- PrincipalMonitor.respawn_node(node) do
       push(socket, "archive_restore_node", node)
     else
       _ ->
         Logger.info("archive_restore_node_fail")
 
         push(socket, "archive_restore_node_fail", %{
-          error: "Fail to archive/restore node - you cannot archive your principal node"
+          error: """
+          Fail to archive/restore node - you cannot archive
+          your principal node and If your Principal BP is syncing for
+          the first time the server might be busy and can take
+          a while to handle your request. DO NOT RESUBMIT, please refresh
+          the page until your request is done.
+          """
         })
     end
 
@@ -237,31 +247,39 @@ defmodule WindshieldWeb.MonitorChannel do
   end
 
   def handle_out("tick_node", full_node, socket) do
-    head_block_num = full_node.last_head_block_num
+    case Node.get_state(full_node.name) do
+      {:ok, full_node} ->
+        head_block_num = full_node.last_head_block_num
 
-    ping_ms =
-      case full_node.ping_stats do
-        %{ping_ms: ping_ms} -> trunc(ping_ms / 1_000_000)
-        _ -> -1
-      end
+        ping_ms =
+          case full_node.ping_stats do
+            %{ping_ms: ping_ms} -> trunc(ping_ms / 1_000_000)
+            _ -> -1
+          end
 
-    node = %{
-      "account" => full_node.account,
-      "ip" => full_node.ip,
-      "port" => full_node.port,
-      "is_ssl" => full_node.is_ssl,
-      "is_watchable" => full_node.is_watchable,
-      "type" => full_node.type,
-      "head_block_num" => head_block_num,
-      "last_produced_block" => full_node.last_produced_block,
-      "last_produced_block_at" => full_node.last_produced_block_at,
-      "ping_ms" => ping_ms,
-      "status" => full_node.status,
-      "votes_count" => full_node.votes_count,
-      "vote_percentage" => full_node.vote_percentage
-    }
+        node = %{
+          "account" => full_node.account,
+          "ip" => full_node.ip,
+          "port" => full_node.port,
+          "is_ssl" => full_node.is_ssl,
+          "is_watchable" => full_node.is_watchable,
+          "type" => full_node.type,
+          "head_block_num" => head_block_num,
+          "last_produced_block" => full_node.last_produced_block,
+          "last_produced_block_at" => full_node.last_produced_block_at,
+          "ping_ms" => ping_ms,
+          "status" => full_node.status,
+          "votes_count" => full_node.votes_count,
+          "vote_percentage" => full_node.vote_percentage,
+          "position" => full_node.position
+        }
 
-    push(socket, "tick_node", node)
+        push(socket, "tick_node", node)
+
+      {:error, _err} ->
+        Logger.info("tick_node interrupted #{inspect(full_node)}")
+    end
+
     {:noreply, socket}
   end
 end
