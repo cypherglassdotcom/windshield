@@ -175,6 +175,34 @@ defmodule WindshieldWeb.MonitorChannel do
     {:noreply, socket}
   end
 
+  def handle_in(
+      "archive_restore_node",
+      %{
+        "account" => account,
+        "is_archived" => is_archived
+      },
+      socket
+    ) do
+
+      with {:ok, node} <- Database.archive_node(account, is_archived),
+        {:ok, state} <- PrincipalMonitor.get_state() do
+
+        cond do
+          state.principal_node != nil && !is_archived ->
+            PrincipalMonitor.upsert_node(node)
+          state.principal_node != nil && is_archived ->
+            PrincipalMonitor.archive_node(account)
+        end
+
+        push(socket, "archive_restore_node", node)
+      else
+      _ ->
+        Logger.info("archive_restore_node_fail")
+        push(socket, "archive_restore_node_fail", %{error: "Fail to archive/restore node"})
+      end
+
+  end
+
   def handle_out("tick_stats", stats, socket) do
     push(socket, "tick_stats", stats)
     {:noreply, socket}

@@ -95,7 +95,7 @@ If the installation was successfull you should see an `"OK"` after the last comm
 
 ### Frontend UI Installation
 
-Here we assume that you have `node` & `npm` installed already in your server, there are many ways to install it and we usually recommend the `nvm` one. After you install node (you can check by running `node -v`), follow the next steps to fully deploy the frontend HTML and JS static files.
+Here we assume that you have `node` & `npm` installed already in your server, there are many ways to install it and we usually recommend the `nvm` one (check https://www.digitalocean.com/community/tutorials/how-to-install-node-js-on-ubuntu-16-04#how-to-install-using-nvm). After you install node (you can check by running `node -v`), follow the next steps to fully deploy the frontend HTML and JS static files.
 
 ```
 cd ~/windshield/frontend
