@@ -19,7 +19,7 @@ defmodule Windshield.Database do
   def get_nodes do
     data =
       :windshield
-      |> Mongo.find(@collection_nodes, %{}, @coll_opts)
+      |> Mongo.find(@collection_nodes, %{}, [{:sort, [position: 1]} | @coll_opts])
       |> Enum.to_list()
 
     {:ok, data}
@@ -33,7 +33,7 @@ defmodule Windshield.Database do
     {:ok, res}
   end
 
-  def upsert_node(account, ip, port, is_ssl, is_watchable, type, is_archived) do
+  def upsert_node(account, ip, port, is_ssl, is_watchable, type, is_archived, position) do
     new_node = %{
       "account" => account,
       "ip" => ip,
@@ -41,7 +41,8 @@ defmodule Windshield.Database do
       "is_ssl" => is_ssl,
       "is_watchable" => is_watchable,
       "type" => type,
-      "is_archived" => is_archived
+      "is_archived" => is_archived,
+      "position" => position
     }
 
     res =

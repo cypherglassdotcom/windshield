@@ -28,6 +28,7 @@ defmodule Windshield.Node do
       "port" => port,
       "is_ssl" => is_ssl,
       "is_watchable" => is_watchable,
+      "position" => position,
       "type" => type,
       "last_produced_block" => last_produced_block,
       "last_produced_block_at" => last_produced_block_at
@@ -46,6 +47,7 @@ defmodule Windshield.Node do
       url: url,
       is_watchable: is_watchable,
       type: type,
+      position: position,
       status: :initial,
       last_info: nil,
       last_head_block_num: 0,

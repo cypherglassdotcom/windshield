@@ -60,7 +60,7 @@ icon icon spin isLeft =
 loadingIcon : Int -> Html msg
 loadingIcon isLoading =
     if isLoading > 0 then
-        icon "spinner" True False
+        icon "circle-o-notch" True False
     else
         text ""
 

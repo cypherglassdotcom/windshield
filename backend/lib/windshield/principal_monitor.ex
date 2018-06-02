@@ -396,7 +396,7 @@ defmodule Windshield.PrincipalMonitor do
       nodes_pids
       |> Enum.filter(fn np -> np != node_pid_name end)
 
-    # if is archived we are done, if not (re)spawn
+    # if it is archived, we are done, if not (re)spawn
     {updated_nodes, updated_nodes_pids} =
       if node["is_archived"] do
         log_info(state, "node #{node["account"]} was archived")
@@ -404,10 +404,11 @@ defmodule Windshield.PrincipalMonitor do
       else
         node_details = [node] |> merge_productions_to_nodes(producers) |> hd()
         spawn_node(node_details, settings)
-        # tolerance time to spawn node
-        :timer.sleep(8_000)
         {[node_details | updated_nodes], [node_pid_name | nodes_pids]}
       end
+
+      # tolerance time to wait for a next loop
+      :timer.sleep(2_500 + settings["node_loop_interval"])
 
     {:reply, :ok, %{state | nodes: updated_nodes, nodes_pids: updated_nodes_pids}}
   end

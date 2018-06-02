@@ -2,12 +2,11 @@ module View exposing (..)
 
 import Model exposing (..)
 import Html exposing (..)
-import Html.Attributes exposing (attribute, class, defaultValue, href, placeholder, target, type_, value, src, colspan)
+import Html.Attributes exposing (attribute, class, defaultValue, href, placeholder, target, type_, value, src, colspan, title)
 import Html.Events exposing (onClick, onInput, onWithOptions)
 import Components exposing (..)
 import Utils exposing (..)
 import Json.Decode as JD
-import Update exposing (nodeTypeTxt, nodeAddressLink, nodeAddress)
 
 
 notification : Notification -> Html Msg
@@ -101,16 +100,26 @@ nodeModal model =
                         UpdateNodeFormPort
                         False
                     ]
-                , selectInput
-                    model.isLoading
-                    [ ( "BP", "BP - Block Producer" )
-                    , ( "FN", "FN - Full Node" )
-                    , ( "EBP", "EBP - External Nodes / Block Producers" )
+                , columns False
+                    [ selectInput
+                        model.isLoading
+                        [ ( "BP", "BP - Block Producer" )
+                        , ( "FN", "FN - Full Node" )
+                        , ( "EBP", "EBP - External Nodes / Block Producers" )
+                        ]
+                        "Node Type"
+                        (nodeTypeTxt node.nodeType)
+                        "globe"
+                        UpdateNodeFormType
+                    , fieldInput
+                        model.isLoading
+                        "Dashboard Position Order"
+                        (toString node.position)
+                        "1"
+                        "trophy"
+                        UpdateNodeFormPosition
+                        False
                     ]
-                    "Node Type"
-                    (nodeTypeTxt node.nodeType)
-                    "globe"
-                    UpdateNodeFormType
                 ]
             ]
             submitButton
@@ -721,15 +730,32 @@ nodeRow model node =
                     ( "--", "--", "--" )
 
                 ExternalBlockProducer ->
-                    ( "--"
-                    , "--"
+                    ( calcTimeDiff node.lastProducedBlockAt model.currentTime
+                    , toString node.lastProducedBlock
                     , formatPercentage node.votePercentage
                     )
+
+        alertIcon =
+            if node.isWatchable then
+                small
+                    [ class "has-text-primary"
+                    , title "Alerts ON"
+                    ]
+                    [ icon "bell" False False ]
+            else
+                small
+                    [ class "has-text-grey-light"
+                    , title "Alerts OFF"
+                    ]
+                    [ icon "bell-o" False False ]
     in
         tr [ class producerClass ]
             [ td [] actions
             , td []
-                [ text node.account
+                [ alertIcon
+                , small [ class "node-position" ]
+                    [ text (toString node.position ++ ". ") ]
+                , text node.account
                 ]
             , td []
                 [ a
@@ -766,14 +792,24 @@ settingsContent model =
                 "Settings"
                 editButton
             , form []
-                [ fieldInput
-                    model.isLoading
-                    "Principal Node Account"
-                    settings.principalNode
-                    "cypherglass1"
-                    "server"
-                    UpdateSettingsFormPrincipalNode
-                    (not model.editSettingsForm)
+                [ columns False
+                    [ fieldInput
+                        model.isLoading
+                        "Principal Block Producer EOS Account"
+                        settings.principalNode
+                        "cypherglass1"
+                        "server"
+                        UpdateSettingsFormPrincipalNode
+                        (not model.editSettingsForm)
+                    , fieldInput
+                        model.isLoading
+                        "Do Not Repeat Same Error for Interval Minutes"
+                        (toString settings.sameAlertIntervalMins)
+                        "500"
+                        "clock-o"
+                        UpdateSettingsFormSameAlertIntervalMins
+                        (not model.editSettingsForm)
+                    ]
                 , div [ class "columns" ]
                     [ div [ class "column" ]
                         [ fieldInput
@@ -798,7 +834,7 @@ settingsContent model =
                     , div [ class "column" ]
                         [ fieldInput
                             model.isLoading
-                            "Calculate Votes Loop Interval (secs)"
+                            "Voting and Nodes Report Interval (secs)"
                             (toString settings.calcVotesIntervalSecs)
                             "300"
                             "clock-o"
@@ -806,47 +842,31 @@ settingsContent model =
                             (not model.editSettingsForm)
                         ]
                     ]
-                , div [ class "columns" ]
-                    [ div [ class "column" ]
-                        [ fieldInput
-                            model.isLoading
-                            "Same Error Alert Interval (minutes)"
-                            (toString settings.sameAlertIntervalMins)
-                            "500"
-                            "clock-o"
-                            UpdateSettingsFormSameAlertIntervalMins
-                            (not model.editSettingsForm)
-                        ]
-                    , div [ class "column" ]
-                        [ fieldInput
-                            model.isLoading
-                            "Block Production Idle Seconds to emit an Alert"
-                            (toString settings.bpToleranceTimeSecs)
-                            "180"
-                            "bell"
-                            UpdateSettingsFormBpToleranceTimeSecs
-                            (not model.editSettingsForm)
-                        ]
-                    , div [ class "column" ]
-                        [ fieldInput
-                            model.isLoading
-                            "Unsynched Blocks to emit an Alert"
-                            (toString settings.unsynchedBlocksToAlert)
-                            "20"
-                            "bell"
-                            UpdateSettingsFormUnsynchedBlocksToAlert
-                            (not model.editSettingsForm)
-                        ]
-                    , div [ class "column" ]
-                        [ fieldInput
-                            model.isLoading
-                            "Failed Pings to emit an Alert"
-                            (toString settings.failedPingsToAlert)
-                            "20"
-                            "bell"
-                            UpdateSettingsFormFailedPingsToAlert
-                            (not model.editSettingsForm)
-                        ]
+                , columns False
+                    [ fieldInput
+                        model.isLoading
+                        "Block Production Idle Seconds to Alert"
+                        (toString settings.bpToleranceTimeSecs)
+                        "180"
+                        "bell"
+                        UpdateSettingsFormBpToleranceTimeSecs
+                        (not model.editSettingsForm)
+                    , fieldInput
+                        model.isLoading
+                        "Unsynched Blocks to emit an Alert"
+                        (toString settings.unsynchedBlocksToAlert)
+                        "20"
+                        "bell"
+                        UpdateSettingsFormUnsynchedBlocksToAlert
+                        (not model.editSettingsForm)
+                    , fieldInput
+                        model.isLoading
+                        "Failed Pings to emit an Alert"
+                        (toString settings.failedPingsToAlert)
+                        "20"
+                        "bell"
+                        UpdateSettingsFormFailedPingsToAlert
+                        (not model.editSettingsForm)
                     ]
                 , footer
                 ]
