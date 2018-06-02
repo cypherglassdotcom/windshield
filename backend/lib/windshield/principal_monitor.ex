@@ -61,6 +61,7 @@ defmodule Windshield.PrincipalMonitor do
     end
 
     {:ok, nodes} = Database.get_nodes()
+    nodes = nodes |> Enum.filter(fn n -> !n["is_archived"] end)
 
     {:ok, stats} = Database.get_stats()
 
@@ -82,7 +83,8 @@ defmodule Windshield.PrincipalMonitor do
       nodes_details
       |> Enum.map(fn n -> spawn_node(n, settings) end)
 
-    principal_url = Node.get_url(principal_node["is_ssl"], principal_node["ip"], principal_node["port"])
+    principal_url =
+      Node.get_url(principal_node["is_ssl"], principal_node["ip"], principal_node["port"])
 
     state = %{
       state
@@ -117,7 +119,7 @@ defmodule Windshield.PrincipalMonitor do
     log_info(state, "Monitor Loop - #{state.status} | LB: #{last_block} | CN: #{current_nodes}")
 
     # refresh principal url
-    state = %{ state | principal_url: get_principal_url(state.principal_node)}
+    state = %{state | principal_url: get_principal_url(state.principal_node)}
 
     # update blocks and sync
     new_state =
@@ -337,8 +339,12 @@ defmodule Windshield.PrincipalMonitor do
     node.url
   end
 
-  def upsert_node(node) do
-    GenServer.call(:principal_monitor, {:upsert_node, node}, 30_000)
+  def respawn_node(node) do
+    GenServer.call(:principal_monitor, {:respawn_node, node}, 30_000)
+  end
+
+  def archive_node(node) do
+    GenServer.call(:principal_monitor, {:archive_node, node}, 30_000)
   end
 
   def get_producers do
@@ -404,8 +410,8 @@ defmodule Windshield.PrincipalMonitor do
     {:reply, {:ok, state.producers}, state}
   end
 
-  def handle_call({:upsert_node, node}, _from, state) do
-    log_info(state, "upserting node #{node["account"]}")
+  def handle_call({:respawn_node, node}, _from, state) do
+    log_info(state, "(re)spawning node #{node["account"]}")
 
     %{nodes: nodes, producers: producers, nodes_pids: nodes_pids, settings: settings} = state
 
@@ -415,49 +421,32 @@ defmodule Windshield.PrincipalMonitor do
       nodes_pids
       |> Enum.find(fn n -> n == node_pid_name end)
 
-    updated_nodes_pids =
-      if node_pid != nil do
-        log_info(state, "stopping #{node_pid}...")
-        GenServer.stop(node_pid)
-        nodes_pids
-      else
-        [ node_pid_name | nodes_pids ]
-      end
+    # stop node if needed and remove from list
+    if node_pid != nil do
+      log_info(state, "stopping #{node_pid}...")
+      GenServer.stop(node_pid)
+    end
 
-    existent_node =
-      nodes
-      |> Enum.find(fn n -> n["account"] == node["account"] end)
-
+    # remove node from actual state
     updated_nodes =
-      if existent_node != nil do
-        nodes
-        |> Enum.map(fn n ->
-          if n["account"] == node["account"] do
-            new_node = %{
-              n
-              | "ip" => node["ip"],
-                "port" => node["port"],
-                "is_ssl" => node["is_ssl"],
-                "is_watchable" => node["is_watchable"],
-                "type" => node["type"]
-            }
+      nodes
+      |> Enum.filter(fn n -> n["account"] != node["account"] end)
 
-            spawn_node(new_node, settings)
+    updated_nodes_pids =
+      nodes_pids
+      |> Enum.filter(fn np -> np != node_pid_name end)
 
-            # tolerance to re-spawn and normalize node
-            :timer.sleep(8_000)
-
-            new_node
-          else
-            n
-          end
-        end)
+    # if is archived we are done, if not (re)spawn
+    {updated_nodes, updated_nodes_pids} =
+      if node["is_archived"] do
+        log_info(state, "node #{node["account"]} was archived")
+        {updated_nodes, updated_nodes_pids}
       else
         node_details = [node] |> merge_productions_to_nodes(producers) |> hd()
-
         spawn_node(node_details, settings)
-
-        [ node_details | nodes ]
+        # tolerance time to spawn node
+        :timer.sleep(8_000)
+        {[node_details | updated_nodes], [node_pid_name | nodes_pids]}
       end
 
     {:reply, :ok, %{state | nodes: updated_nodes, nodes_pids: updated_nodes_pids}}

@@ -119,9 +119,14 @@ defmodule WindshieldWeb.MonitorChannel do
     case Node.get_state(String.to_atom(account)) do
       {:ok, %{last_info: last_info}} ->
         push(socket, "get_node_chain_info", %{chain_info: last_info})
+
       _ ->
-        push(socket, "get_node_chain_info_fail", %{error: "Fail to get node chain info for #{account}"})
+        push(socket, "get_node_chain_info_fail", %{
+          error: "Fail to get node chain info for #{account}"
+        })
     end
+
+    {:noreply, socket}
   end
 
   def handle_in(
@@ -133,7 +138,8 @@ defmodule WindshieldWeb.MonitorChannel do
           "port" => port,
           "is_ssl" => is_ssl,
           "is_watchable" => is_watchable,
-          "type" => type
+          "type" => type,
+          "is_archived" => is_archived
         },
         socket
       ) do
@@ -157,18 +163,26 @@ defmodule WindshieldWeb.MonitorChannel do
             _ -> "EBP"
           end
 
-        with {:ok, new_node} <- Database.upsert_node(account, ip, port, is_ssl, is_watchable, type),
+        with {:ok, new_node} <-
+               Database.upsert_node(
+                 account,
+                 ip,
+                 port,
+                 is_ssl,
+                 is_watchable,
+                 type,
+                 is_archived
+               ),
              {:ok, state} <- PrincipalMonitor.get_state() do
+          if state.principal_node != nil do
+            PrincipalMonitor.respawn_node(new_node)
+          end
 
-            if state.principal_node != nil do
-              PrincipalMonitor.upsert_node(new_node)
-            end
-
-            push(socket, "upsert_node", new_node)
-          else
-            _ ->
-              Logger.info("upsert_node_fail")
-              push(socket, "upsert_node_fail", %{error: "Fail to upsert node"})
+          push(socket, "upsert_node", new_node)
+        else
+          _ ->
+            Logger.info("upsert_node_fail")
+            push(socket, "upsert_node_fail", %{error: "Fail to upsert node"})
         end
     end
 
@@ -176,31 +190,32 @@ defmodule WindshieldWeb.MonitorChannel do
   end
 
   def handle_in(
-      "archive_restore_node",
-      %{
-        "account" => account,
-        "is_archived" => is_archived
-      },
-      socket
-    ) do
+        "archive_restore_node",
+        %{
+          "account" => account,
+          "is_archived" => is_archived,
+          "token" => token
+        },
+        socket
+      ) do
 
-      with {:ok, node} <- Database.archive_node(account, is_archived),
-        {:ok, state} <- PrincipalMonitor.get_state() do
+    # authenticate user
+    {:ok, _user} = SystemAuth.verify(socket, token)
 
-        cond do
-          state.principal_node != nil && !is_archived ->
-            PrincipalMonitor.upsert_node(node)
-          state.principal_node != nil && is_archived ->
-            PrincipalMonitor.archive_node(account)
-        end
+    with {:ok, state} <- PrincipalMonitor.get_state(),
+         true <- state.principal_node != String.to_atom(account),
+         {:ok, node} <- Database.archive_restore_node(account, is_archived) do
 
-        push(socket, "archive_restore_node", node)
-      else
-      _ ->
-        Logger.info("archive_restore_node_fail")
-        push(socket, "archive_restore_node_fail", %{error: "Fail to archive/restore node"})
+      if state.principal_node != nil do
+        PrincipalMonitor.respawn_node(node)
       end
 
+      push(socket, "archive_restore_node", node)
+    else
+      _ ->
+        Logger.info("archive_restore_node_fail")
+        push(socket, "archive_restore_node_fail", %{error: "Fail to archive/restore node - you cannot archive your principal node"})
+    end
   end
 
   def handle_out("tick_stats", stats, socket) do
@@ -219,11 +234,7 @@ defmodule WindshieldWeb.MonitorChannel do
   end
 
   def handle_out("tick_node", full_node, socket) do
-    head_block_num =
-      case full_node.last_info do
-        %{"head_block_num" => head_block_num} -> head_block_num
-        _ -> 0
-      end
+    head_block_num = full_node.last_head_block_num
 
     ping_ms =
       case full_node.ping_stats do

@@ -19,7 +19,7 @@ defmodule WindshieldWeb.RootController do
   end
 
   def node_state(conn, %{"account" => account}) do
-    {:ok, state} = account |> String.to_atom |> Node.get_state
+    {:ok, state} = account |> String.to_atom() |> Node.get_state()
     json(conn, state)
   end
 

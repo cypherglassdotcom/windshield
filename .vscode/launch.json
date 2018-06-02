@@ -7,6 +7,14 @@
     {
       "type": "mix_task",
       "request": "launch",
+      "name": "mix format",
+      "task": "format",
+      "taskArgs": [],
+      "projectDir": "${workspaceRoot}/backend"
+    },
+    {
+      "type": "mix_task",
+      "request": "launch",
       "name": "mix phx.server",
       "task": "phx.server",
       "taskArgs": [],
@@ -14,8 +22,10 @@
     },
     {
       "type": "mix_task",
-      "name": "mix (Default task)",
       "request": "launch",
+      "name": "mix credo",
+      "task": "credo",
+      "taskArgs": [],
       "projectDir": "${workspaceRoot}/backend"
     },
     {

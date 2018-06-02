@@ -33,14 +33,15 @@ defmodule Windshield.Database do
     {:ok, res}
   end
 
-  def upsert_node(account, ip, port, is_ssl, is_watchable, type) do
+  def upsert_node(account, ip, port, is_ssl, is_watchable, type, is_archived) do
     new_node = %{
       "account" => account,
       "ip" => ip,
       "port" => port,
       "is_ssl" => is_ssl,
       "is_watchable" => is_watchable,
-      "type" => type
+      "type" => type,
+      "is_archived" => is_archived
     }
 
     res =
@@ -55,6 +56,22 @@ defmodule Windshield.Database do
     case res do
       {:ok, _res} -> {:ok, new_node}
       _ -> {:error, "Fail to create/update node #{inspect(new_node)}"}
+    end
+  end
+
+  def archive_restore_node(account, is_archived) do
+    res =
+      :windshield
+      |> Mongo.find_one_and_update(
+        @collection_nodes,
+        %{"account" => account},
+        %{"$set" => %{"is_archived" => is_archived}},
+        @coll_opts
+      )
+
+    case res do
+      {:ok, node} -> {:ok, node |> Map.put("is_archived", is_archived)}
+      error -> error
     end
   end
 
