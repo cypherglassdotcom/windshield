@@ -115,77 +115,56 @@ nodeChainInfoModal model =
             else
                 "modal"
 
-        content =
+        ( title, content ) =
             case model.viewingNode of
                 Just node ->
-                    case model.chainInfo of
+                    ( "Node " ++ node.account ++ " Chain Info"
+                    , case model.chainInfo of
                         Just chainInfo ->
-                            [ fieldInput
-                                model.isLoading
-                                "Account"
-                                node.account
-                                ""
-                                ""
-                                UpdateNodeFormAccount
-                                True
-                            , fieldInput
-                                model.isLoading
-                                "Server Version"
-                                chainInfo.serverVersion
-                                ""
-                                ""
-                                UpdateNodeFormAccount
-                                True
-                            , fieldInput
-                                model.isLoading
-                                "Chain Id"
-                                chainInfo.chainId
-                                ""
-                                ""
-                                UpdateNodeFormAccount
-                                True
-                            , fieldInput
-                                model.isLoading
-                                "Head Block Number"
-                                (toString chainInfo.headBlockNum)
-                                ""
-                                ""
-                                UpdateNodeFormAccount
-                                True
-                            , fieldInput
-                                model.isLoading
+                            [ columns False
+                                [ displayField
+                                    "Account"
+                                    node.account
+                                    ""
+                                , displayField
+                                    "Server Version"
+                                    chainInfo.serverVersion
+                                    ""
+                                ]
+                            , columns False
+                                [ displayField
+                                    "Head Block Number"
+                                    (toString chainInfo.headBlockNum)
+                                    ""
+                                , displayField
+                                    "Head Block Time"
+                                    (formatTime chainInfo.headBlockTime)
+                                    ""
+                                , displayField
+                                    "Last Irrev. Block Num"
+                                    (toString chainInfo.lastIrreversibleBlockNum)
+                                    ""
+                                ]
+                            , displayField
                                 "Head Block Id"
                                 chainInfo.headBlockId
                                 ""
+                            , displayField
+                                "Last Irreversible Block Id"
+                                chainInfo.lastIrreversibleBlockId
                                 ""
-                                UpdateNodeFormAccount
-                                True
-                            , fieldInput
-                                model.isLoading
-                                "Head Block Time"
-                                (formatTime chainInfo.headBlockTime)
+                            , displayField
+                                "Chain Id"
+                                chainInfo.chainId
                                 ""
-                                ""
-                                UpdateNodeFormAccount
-                                True
-                            , fieldInput
-                                model.isLoading
-                                "Last Irreversible Block Num"
-                                (toString chainInfo.lastIrreversibleBlockNum)
-                                ""
-                                ""
-                                UpdateNodeFormAccount
-                                True
                             ]
 
                         Nothing ->
                             [ text "Loading Chain Info" ]
+                    )
 
                 Nothing ->
-                    [ text "Loading Node" ]
-
-        title =
-            "Node Blockchain Info"
+                    ( "Loading Node Chain Info", [ text "Loading Node" ] )
     in
         modalCard model.isLoading
             title
@@ -264,6 +243,56 @@ helpModal model =
             ]
             Nothing
             Nothing
+
+
+archiveConfirmationModal : Model -> Html Msg
+archiveConfirmationModal model =
+    case model.viewingNode of
+        Just node ->
+            let
+                modalClass =
+                    if model.showHelp then
+                        "modal is-active"
+                    else
+                        "modal"
+            in
+                modalCard model.isLoading
+                    ("Archive Node " ++ node.account)
+                    CancelArchive
+                    [ div [ class "content" ]
+                        [ p [] [ text ("Are you sure that you want to archive the node " ++ node.account ++ "?") ]
+                        ]
+                    ]
+                    (Just ( ("Yes, I Want to Archive " ++ node.account), (SubmitArchive node) ))
+                    (Just ( "Cancel", CancelArchive ))
+
+        _ ->
+            text ""
+
+
+restoreConfirmationModal : Model -> Html Msg
+restoreConfirmationModal model =
+    case model.viewingNode of
+        Just node ->
+            let
+                modalClass =
+                    if model.showHelp then
+                        "modal is-active"
+                    else
+                        "modal"
+            in
+                modalCard model.isLoading
+                    ("Restore Node " ++ node.account)
+                    CancelRestore
+                    [ div [ class "content" ]
+                        [ p [] [ text ("Are you sure that you want to restore the node " ++ node.account ++ "?") ]
+                        ]
+                    ]
+                    (Just ( ("Yes, I Want to Restore " ++ node.account), (SubmitRestore node) ))
+                    (Just ( "Cancel", CancelRestore ))
+
+        _ ->
+            text ""
 
 
 topMenu : Model -> Html Msg
@@ -461,26 +490,54 @@ alertsContent model =
 monitorContent : Model -> Html Msg
 monitorContent model =
     let
-        addNodeButton =
+        menu =
             if not (String.isEmpty model.user.token) then
-                [ a
-                    [ class "button is-success"
-                    , onClick (ToggleNodeModal (Just newNode))
+                if model.showArchivedNodes then
+                    [ a [ onClick ToggleArchivedNodes ] [ text "Active Nodes" ] ]
+                else
+                    [ a [ onClick ToggleArchivedNodes ] [ text "Archived Nodes" ]
+                    , a
+                        [ class "button is-success"
+                        , onClick (ToggleNodeModal (Just newNode))
+                        ]
+                        [ text "Add Node" ]
                     ]
-                    [ text "Add Node" ]
-                ]
             else
                 [ text "" ]
+
+        title =
+            if model.showArchivedNodes then
+                "Archived Nodes"
+            else
+                "Nodes Dashboard"
+
+        list =
+            if model.showArchivedNodes then
+                archivedNodesList model
+            else
+                nodesList model
     in
         div [ class "content" ]
-            [ titleMenu
-                "Nodes Dashboard"
-                addNodeButton
-            , nodesList model
-
-            -- , h2 [] [ text "Producers Stats" ]
-            -- , producersList model
+            [ titleMenu title menu
+            , list
             ]
+
+
+nodeTagger : Node -> Html Msg
+nodeTagger node =
+    let
+        ( txt, nodeClass ) =
+            case node.nodeType of
+                BlockProducer ->
+                    ( "BlockPrd", "is-success" )
+
+                FullNode ->
+                    ( "FullNode", "is-info" )
+
+                ExternalBlockProducer ->
+                    ( "External", "is-light" )
+    in
+        span [ class ("tag " ++ nodeClass) ] [ text txt ]
 
 
 nodesList : Model -> Html Msg
@@ -491,7 +548,9 @@ nodesList model =
 
         nodesRows =
             if List.length nodes > 0 then
-                nodes |> List.map (\n -> nodeRow model n)
+                nodes
+                    |> List.filter (\n -> not n.isArchived)
+                    |> List.map (\n -> nodeRow model n)
             else
                 [ tr []
                     [ td
@@ -517,6 +576,66 @@ nodesList model =
                     ]
                     :: nodesRows
                 )
+            ]
+
+
+archivedNodesList : Model -> Html Msg
+archivedNodesList model =
+    let
+        archivedNodes =
+            model.nodes
+                |> List.filter (\n -> n.isArchived)
+
+        nodesRows =
+            if List.length archivedNodes > 0 then
+                archivedNodes |> List.map archivedNodeRow
+            else
+                [ tr []
+                    [ td
+                        [ colspan 4
+                        , class "has-text-centered"
+                        ]
+                        [ text "There's no Archived Nodes" ]
+                    ]
+                ]
+    in
+        table [ class "table is-striped is-hoverable is-fullwidth" ]
+            [ thead []
+                (tr []
+                    [ th [] [ text "" ]
+                    , th [] [ text "Account" ]
+                    , th [] [ text "Address" ]
+                    , th [] [ text "Type" ]
+                    ]
+                    :: nodesRows
+                )
+            ]
+
+
+archivedNodeRow : Node -> Html Msg
+archivedNodeRow node =
+    let
+        actions =
+            [ a [ onClick (ToggleNodeModal (Just node)) ]
+                [ icon "pencil" False False
+                ]
+            , a [ onClick (ShowRestoreConfirmationModal node) ]
+                [ icon "undo" False False ]
+            ]
+    in
+        tr []
+            [ td [] actions
+            , td []
+                [ text node.account
+                ]
+            , td []
+                [ a
+                    [ href (nodeAddressLink node)
+                    , target "_blank"
+                    ]
+                    [ text (nodeAddress node) ]
+                ]
+            , td [] [ nodeTagger node ]
             ]
 
 
@@ -558,40 +677,42 @@ nodeRow model node =
             else
                 ""
 
-        nodeTagger txt nodeClass =
-            span [ class ("tag " ++ nodeClass) ] [ text txt ]
-
         isLogged =
             not (String.isEmpty model.user.token)
 
-        actions =
-            [ a [ onClick (ToggleNodeChainInfoModal (Just node)) ]
-                [ icon "info-circle" False False ]
-            , if isLogged then
-                a [ onClick (ToggleNodeModal (Just node)) ]
+        loggedActions =
+            if isLogged then
+                [ a [ onClick (ToggleNodeModal (Just node)) ]
                     [ icon "pencil" False False
                     ]
-              else
-                text ""
-            ]
+                , a [ onClick (ShowArchiveConfirmationModal node) ]
+                    [ icon "archive" False False
+                    ]
+                ]
+            else
+                [ text "" ]
 
-        ( lastPrdAt, lastPrdBlock, votePercentage, nodeTag ) =
+        actions =
+            (a [ onClick (ToggleNodeChainInfoModal (Just node)) ]
+                [ icon "info-circle" False False ]
+            )
+                :: loggedActions
+
+        ( lastPrdAt, lastPrdBlock, votePercentage ) =
             case node.nodeType of
                 BlockProducer ->
                     ( calcTimeDiff node.lastProducedBlockAt model.currentTime
                     , toString node.lastProducedBlock
                     , formatPercentage node.votePercentage
-                    , nodeTagger "BlockPrd" "is-success"
                     )
 
                 FullNode ->
-                    ( "--", "--", "--", nodeTagger "FullNode" "is-info" )
+                    ( "--", "--", "--" )
 
                 ExternalBlockProducer ->
                     ( "--"
                     , "--"
                     , formatPercentage node.votePercentage
-                    , nodeTagger "External" "is-light"
                     )
     in
         tr [ class producerClass ]
@@ -606,7 +727,7 @@ nodeRow model node =
                     ]
                     [ text (nodeAddress node) ]
                 ]
-            , td [] [ nodeTag ]
+            , td [] [ nodeTagger node ]
             , td [] [ text lastPrdBlock ]
             , td [] [ text lastPrdAt ]
             , td [] [ text votePercentage ]
@@ -730,7 +851,7 @@ pageFooter =
                     [ strong []
                         [ text "Cypherglass WINDSHIELD" ]
                     , text " "
-                    , a [ href "https://github.com/leordev/eos-node-monitor" ]
+                    , a [ href "https://github.com/cypherglassdotcom/windshield" ]
                         [ text "GitHub" ]
                     , text " - One more Special Tool, built with love, from  "
                     , a [ href "http://cypherglass.com" ]
@@ -750,6 +871,10 @@ view model =
                 helpModal model
             else if model.showNode then
                 nodeModal model
+            else if model.showArchiveConfirmation then
+                archiveConfirmationModal model
+            else if model.showRestoreConfirmation then
+                restoreConfirmationModal model
             else if model.showNodeChainInfo then
                 nodeChainInfoModal model
             else if model.showAdminLogin then

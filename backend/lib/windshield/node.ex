@@ -48,6 +48,7 @@ defmodule Windshield.Node do
       type: type,
       status: :initial,
       last_info: nil,
+      last_head_block_num: 0,
       ping_stats: %{
         ping_ms: -1,
         ping_total_requests: 0,
@@ -79,7 +80,7 @@ defmodule Windshield.Node do
   def handle_info(:node_loop, state) do
     {:ok, %{settings: settings}} = PrincipalMonitor.get_state()
 
-    Logger.info("Node #{state.name} | #{state.status}")
+    Logger.info("Node #{state.name} | #{state.status} | #{state.last_head_block_num}")
 
     GenServer.cast(state.name, :ping)
 
@@ -112,11 +113,7 @@ defmodule Windshield.Node do
         unsynched_blocks_to_alert = settings["unsynched_blocks_to_alert"]
         same_alert_interval_mins = settings["same_alert_interval_mins"]
 
-        current_block_num =
-          case state.last_info do
-            %{"head_block_num" => num} -> num
-            _ -> 0
-          end
+        current_block_num = state.last_head_block_num
 
         unsync_blocks = principal_head_block_num - current_block_num
 
@@ -154,7 +151,8 @@ defmodule Windshield.Node do
           end
 
         {:noreply,
-          %{state | last_unsynched_blocks_alert_at: last_unsynched_blocks_alert_at, status: status}}
+         %{state | last_unsynched_blocks_alert_at: last_unsynched_blocks_alert_at, status: status}}
+
       _ ->
         {:noreply, state}
     end
@@ -195,43 +193,15 @@ defmodule Windshield.Node do
   end
 
   def handle_cast(:ping, state) do
-    start = System.os_time()
 
-    {info_body, ping, error} =
-      case EosApi.get_chain_info(state.url) do
-        {:ok, body} ->
-          ping = System.os_time() - start
-          {body, ping, nil}
+    {info_body, ping, error} = ping_info(state)
 
-        {:error, err} ->
-          error = "#{state.name} >>> Fail to get #{state.url} CHAIN INFO\n #{inspect(err)}"
-          Logger.error(error)
-          {state.last_info, -1, error}
-      end
+    new_ping_stats = calc_ping_stats(state, ping)
 
-    ping_stats = state.ping_stats
-
-    {ping_total_failures, last_success_ping_at, ping_failures_since_last_success} =
-      if ping < 0 do
-        {ping_stats.ping_total_failures + 1, ping_stats.last_success_ping_at,
-         ping_stats.ping_failures_since_last_success + 1}
-      else
-        {ping_stats.ping_total_failures, System.os_time(), 0}
-      end
-
-    new_ping_stats = %{
-      ping_stats
-      | ping_ms: ping,
-        ping_total_requests: state.ping_stats.ping_total_requests + 1,
-        ping_total_failures: ping_total_failures,
-        ping_failures_since_last_success: ping_failures_since_last_success,
-        last_success_ping_at: last_success_ping_at
-    }
-
-    # last_success_ping_diff = System.os_time() - last_success_ping_at
+    ping_failures = new_ping_stats.ping_failures_since_last_success
 
     {status, last_alert} =
-      if ping < 0 && ping_failures_since_last_success > state.settings["failed_pings_to_alert"] do
+      if ping < 0 && ping_failures > state.settings["failed_pings_to_alert"] do
         last_ping_alert =
           broadcast_ping_alert(
             state.settings["same_alert_interval_mins"],
@@ -254,12 +224,20 @@ defmodule Windshield.Node do
         status
       end
 
+    # update last head block num
+    last_head_block_num =
+      case info_body do
+        %{"head_block_num" => num} -> num
+        _ -> state.last_head_block_num
+      end
+
     new_state = %{
       state
       | status: status,
         ping_stats: new_ping_stats,
         last_info: info_body,
-        last_ping_alert_at: last_alert
+        last_ping_alert_at: last_alert,
+        last_head_block_num: last_head_block_num
     }
 
     WindshieldWeb.Endpoint.broadcast("monitor:main", "tick_node", new_state)
@@ -305,13 +283,7 @@ defmodule Windshield.Node do
   end
 
   def handle_call(:get_head_block, _from, state) do
-    head_block_num =
-      case state.last_info do
-        %{"head_block_num" => num} -> num
-        _ -> -1
-      end
-
-    {:reply, {:ok, head_block_num}, state}
+    {:reply, {:ok, state.last_head_block_num}, state}
   end
 
   def handle_call({:get_block_info, block_num}, _from, state) do
@@ -326,6 +298,42 @@ defmodule Windshield.Node do
       end
 
     {:reply, {status, response_body}, state}
+  end
+
+  def calc_ping_stats(state, ping) do
+    ping_stats = state.ping_stats
+
+    {ping_total_failures, last_success_ping_at, ping_failures_since_last_success} =
+      if ping < 0 do
+        {ping_stats.ping_total_failures + 1, ping_stats.last_success_ping_at,
+         ping_stats.ping_failures_since_last_success + 1}
+      else
+        {ping_stats.ping_total_failures, System.os_time(), 0}
+      end
+
+    %{
+      ping_stats
+      | ping_ms: ping,
+        ping_total_requests: state.ping_stats.ping_total_requests + 1,
+        ping_total_failures: ping_total_failures,
+        ping_failures_since_last_success: ping_failures_since_last_success,
+        last_success_ping_at: last_success_ping_at
+    }
+  end
+
+  def ping_info(state) do
+    start = System.os_time()
+
+    case EosApi.get_chain_info(state.url) do
+      {:ok, body} ->
+        ping = System.os_time() - start
+        {body, ping, nil}
+
+      {:error, err} ->
+        error = "#{state.name} >>> Fail to get #{state.url} CHAIN INFO\n #{inspect(err)}"
+        Logger.error(error)
+        {state.last_info, -1, error}
+    end
   end
 
   def broadcast_ping_alert(
@@ -359,10 +367,10 @@ defmodule Windshield.Node do
 
   def get_url(is_ssl, ip, port) do
     is_ssl
-      |> get_ssl_prefix()
-      |> Kernel.<>(ip)
-      |> Kernel.<>(":")
-      |> Kernel.<>(Integer.to_string(port))
+    |> get_ssl_prefix()
+    |> Kernel.<>(ip)
+    |> Kernel.<>(":")
+    |> Kernel.<>(Integer.to_string(port))
   end
 
   def get_ssl_prefix(is_ssl) do
@@ -372,5 +380,4 @@ defmodule Windshield.Node do
       "http://"
     end
   end
-
 end

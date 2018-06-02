@@ -215,7 +215,7 @@ defmodule Windshield.TaskVotesFork do
   end
 
   def report_producer(account, block_num) do
-    with {:ok, state} <- account |> String.to_atom |> Node.get_state do
+    with {:ok, state} <- account |> String.to_atom() |> Node.get_state() do
       case state.status do
         :active -> get_block_info(state, block_num)
         status -> {:error_status, account, status}

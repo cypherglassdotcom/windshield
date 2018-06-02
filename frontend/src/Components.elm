@@ -3,6 +3,22 @@ port module Components exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (attribute, class, defaultValue, href, placeholder, target, type_, value, src, colspan)
 import Html.Events exposing (onClick, onInput, onWithOptions)
+import Model exposing (Msg(NoOpStr))
+
+
+columns : Bool -> List (Html msg) -> Html msg
+columns isMultiline cols =
+    let
+        mlClass =
+            if isMultiline then
+                " is-multiline"
+            else
+                ""
+    in
+        div [ class ("columns" ++ mlClass) ]
+            (cols
+                |> List.map (\item -> div [ class "column" ] [ item ])
+            )
 
 
 titleMenu : String -> List (Html msg) -> Html msg
@@ -11,7 +27,9 @@ titleMenu title menu =
         [ div [ class "level-left" ]
             [ div [ class "level-item" ] [ h2 [] [ text title ] ] ]
         , div [ class "level-right" ]
-            [ div [ class "level-item" ] menu ]
+            (menu
+                |> List.map (\item -> div [ class "level-item" ] [ item ])
+            )
         ]
 
 
@@ -110,6 +128,11 @@ basicFieldInput isLoading fieldLabel fieldValue fieldPlaceHolder fieldIcon field
 fieldInput : Int -> String -> String -> String -> String -> (String -> msg) -> Bool -> Html msg
 fieldInput isLoading fieldLabel fieldValue fieldPlaceHolder fieldIcon fieldMsg readOnly =
     basicFieldInput isLoading fieldLabel fieldValue fieldPlaceHolder fieldIcon fieldMsg readOnly "text"
+
+
+displayField : String -> String -> String -> Html Msg
+displayField fieldLabel fieldValue fieldIcon =
+    basicFieldInput 0 fieldLabel fieldValue "" fieldIcon NoOpStr True "text"
 
 
 passwordInput : Int -> String -> String -> String -> String -> (String -> msg) -> Bool -> Html msg

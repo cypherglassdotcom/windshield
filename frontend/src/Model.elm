@@ -90,6 +90,7 @@ type alias Node =
     , lastProducedBlockAt : Time.Time
     , nodeType : NodeType
     , votePercentage : Float
+    , isArchived : Bool
     , isNew : Bool
     }
 
@@ -138,7 +139,11 @@ type alias Model =
     , isMuted : Bool
     , showHelp : Bool
     , showNode : Bool
+    , showArchivedNodes : Bool
     , showAdminLogin : Bool
+    , showArchiveConfirmation : Bool
+    , showRestoreConfirmation : Bool
+    , showNodeChainInfo : Bool
     , adminPassword : String
     , user : User
     , socketServer : String
@@ -160,14 +165,13 @@ type alias Model =
     , nodeForm : Node
     , chainInfo : Maybe ChainInfo
     , viewingNode : Maybe Node
-    , showNodeChainInfo : Bool
     , alerts : List Alert
     }
 
 
 newNode : Node
 newNode =
-    Node "" "" 8888 False True Initial 0 0 0.0 0 0.0 BlockProducer 0.0 True
+    Node "" "" 8888 False True Initial 0 0 0.0 0 0.0 BlockProducer 0.0 False True
 
 
 type Msg
@@ -197,6 +201,7 @@ type Msg
     | ReceiveUpsertNode JE.Value
     | ReceiveNodeChainInfo JE.Value
     | ReceiveUpsertNodeFail JE.Value
+    | ReceiveArchiveRestoreFail JE.Value
     | ToggleSettingsForm
     | UpdateSettingsFormPrincipalNode String
     | UpdateSettingsFormMonitorLoopInterval String
@@ -212,9 +217,18 @@ type Msg
     | UpdateAdminLoginPassword String
     | ToggleNodeChainInfoModal (Maybe Node)
     | ToggleNodeModal (Maybe Node)
+    | ToggleArchivedNodes
     | AuthResponse (Result Http.Error User)
     | UpdateNodeFormAccount String
     | UpdateNodeFormIp String
     | UpdateNodeFormPort String
     | UpdateNodeFormType String
     | SubmitNode
+    | ShowArchiveConfirmationModal Node
+    | ShowRestoreConfirmationModal Node
+    | CancelArchive
+    | SubmitArchive Node
+    | CancelRestore
+    | SubmitRestore Node
+    | NoOp
+    | NoOpStr String

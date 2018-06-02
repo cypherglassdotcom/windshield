@@ -73,7 +73,11 @@ initialModel =
     , isMuted = False
     , showHelp = False
     , showNode = False
+    , showArchivedNodes = False
     , showAdminLogin = False
+    , showArchiveConfirmation = False
+    , showRestoreConfirmation = False
+    , showNodeChainInfo = False
     , adminPassword = ""
     , user = User "" "" 0
     , socketServer = ""
@@ -90,7 +94,6 @@ initialModel =
     , monitorConnected = False
     , monitorState = MonitorState InitialMonitor 0
     , nodeForm = newNode
-    , showNodeChainInfo = False
     , viewingNode = Nothing
     , chainInfo = Nothing
     , settings = Settings "" 0 0 0 0 0 0 0
@@ -121,6 +124,8 @@ initPhxSocket socketServer =
         |> Phoenix.Socket.on "tick_producer" "monitor:main" ReceiveProducer
         |> Phoenix.Socket.on "tick_node" "monitor:main" ReceiveNode
         |> Phoenix.Socket.on "emit_alert" "monitor:main" ReceiveAlert
+        |> Phoenix.Socket.on "archive_restore_node" "monitor:main" ReceiveUpsertNode
+        |> Phoenix.Socket.on "archive_restore_node_fail" "monitor:main" ReceiveArchiveRestoreFail
 
 
 
@@ -299,6 +304,8 @@ update msg model =
                             , nodes = nodes
                             , showNode = False
                             , nodeForm = newNode
+                            , viewingNode = Nothing
+                            , showArchiveConfirmation = False
                           }
                         , Cmd.none
                         )
@@ -308,6 +315,9 @@ update msg model =
                         ( { model | isLoading = model.isLoading - 1 }, Cmd.none )
 
         ReceiveUpsertNodeFail raw ->
+            handleReceiveWsError model raw
+
+        ReceiveArchiveRestoreFail raw ->
             handleReceiveWsError model raw
 
         ReceiveNodesFail raw ->
@@ -458,6 +468,9 @@ update msg model =
 
         ToggleHelp ->
             ( { model | showHelp = (not model.showHelp) }, Cmd.none )
+
+        ToggleArchivedNodes ->
+            ( { model | showArchivedNodes = (not model.showArchivedNodes) }, Cmd.none )
 
         ToggleAdminLoginModal ->
             ( { model
@@ -682,6 +695,46 @@ update msg model =
             in
                 ( { newModel | isLoading = (model.isLoading + 1) }, cmd )
 
+        ShowArchiveConfirmationModal node ->
+            ( { model | viewingNode = Just node, showArchiveConfirmation = True }
+            , Cmd.none
+            )
+
+        ShowRestoreConfirmationModal node ->
+            ( { model | viewingNode = Just node, showRestoreConfirmation = True }
+            , Cmd.none
+            )
+
+        CancelArchive ->
+            ( { model | viewingNode = Nothing, showArchiveConfirmation = False }
+            , Cmd.none
+            )
+
+        SubmitArchive node ->
+            let
+                ( newModel, cmd ) =
+                    submitArchive model node True
+            in
+                ( { newModel | isLoading = (model.isLoading + 1) }, cmd )
+
+        CancelRestore ->
+            ( { model | viewingNode = Nothing, showRestoreConfirmation = False }
+            , Cmd.none
+            )
+
+        SubmitRestore node ->
+            let
+                ( newModel, cmd ) =
+                    submitArchive model node False
+            in
+                ( { newModel | isLoading = (model.isLoading + 1) }, cmd )
+
+        NoOp ->
+            ( model, Cmd.none )
+
+        NoOpStr _ ->
+            ( model, Cmd.none )
+
 
 
 -- Functions
@@ -822,6 +875,22 @@ submitNode model =
         )
 
 
+submitArchive : Model -> Node -> Bool -> ( Model, Cmd Msg )
+submitArchive model node isArchive =
+    let
+        push_ =
+            Phoenix.Push.init "archive_restore_node" "monitor:main"
+                |> Phoenix.Push.withPayload
+                    (nodeArchiveEncoder model.user.token node.account isArchive)
+
+        ( phxSocket, phxCmd ) =
+            Phoenix.Socket.push push_ model.phxSocket
+    in
+        ( { model | phxSocket = phxSocket }
+        , Cmd.map PhoenixMsg phxCmd
+        )
+
+
 isoStringToDateDecoder : JD.Decoder Float
 isoStringToDateDecoder =
     JD.string
@@ -844,19 +913,6 @@ accountEncoder : String -> JE.Value
 accountEncoder account =
     JE.object
         [ ( "account", JE.string account )
-        ]
-
-
-nodeEncoder : Node -> String -> JE.Value
-nodeEncoder obj token =
-    JE.object
-        [ ( "account", JE.string obj.account )
-        , ( "token", JE.string token )
-        , ( "ip", JE.string obj.ip )
-        , ( "port", JE.int obj.addrPort )
-        , ( "is_ssl", JE.bool obj.isSsl )
-        , ( "is_watchable", JE.bool obj.isWatchable )
-        , ( "type", JE.string (nodeTypeTxt obj.nodeType) )
         ]
 
 
@@ -936,6 +992,29 @@ alertDecoder =
             |> JDP.resolve
 
 
+nodeEncoder : Node -> String -> JE.Value
+nodeEncoder obj token =
+    JE.object
+        [ ( "account", JE.string obj.account )
+        , ( "token", JE.string token )
+        , ( "ip", JE.string obj.ip )
+        , ( "port", JE.int obj.addrPort )
+        , ( "is_ssl", JE.bool obj.isSsl )
+        , ( "is_watchable", JE.bool obj.isWatchable )
+        , ( "type", JE.string (nodeTypeTxt obj.nodeType) )
+        , ( "is_archived", JE.bool obj.isArchived )
+        ]
+
+
+nodeArchiveEncoder : String -> String -> Bool -> JE.Value
+nodeArchiveEncoder token account isArchived =
+    JE.object
+        [ ( "account", JE.string account )
+        , ( "token", JE.string token )
+        , ( "is_archived", JE.bool isArchived )
+        ]
+
+
 nodeStatusDecoder : JD.Decoder NodeStatus
 nodeStatusDecoder =
     JD.string
@@ -999,6 +1078,7 @@ nodeDecoder =
         |> JDP.optional "last_produced_block_at" isoStringToDateDecoder 0
         |> JDP.required "type" nodeTypeDecoder
         |> JDP.optional "vote_percentage" JD.float 0.0
+        |> JDP.optional "is_archived" JD.bool False
         |> JDP.hardcoded False
 
 
