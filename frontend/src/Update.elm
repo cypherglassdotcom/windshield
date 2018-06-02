@@ -309,6 +309,7 @@ update msg model =
                             , nodeForm = newNode
                             , viewingNode = Nothing
                             , showArchiveConfirmation = False
+                            , showRestoreConfirmation = False
                           }
                         , Cmd.none
                         )

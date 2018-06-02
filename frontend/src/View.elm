@@ -636,10 +636,16 @@ archivedNodeRow : Node -> Html Msg
 archivedNodeRow node =
     let
         actions =
-            [ a [ onClick (ToggleNodeModal (Just node)) ]
+            [ a
+                [ onClick (ToggleNodeModal (Just node))
+                , title "Edit Node"
+                ]
                 [ icon "pencil" False False
                 ]
-            , a [ onClick (ShowRestoreConfirmationModal node) ]
+            , a
+                [ onClick (ShowRestoreConfirmationModal node)
+                , title "Restore Node"
+                ]
                 [ icon "undo" False False ]
             ]
     in
@@ -702,10 +708,16 @@ nodeRow model node =
 
         loggedActions =
             if isLogged then
-                [ a [ onClick (ToggleNodeModal (Just node)) ]
+                [ a
+                    [ onClick (ToggleNodeModal (Just node))
+                    , title "Edit Node"
+                    ]
                     [ icon "pencil" False False
                     ]
-                , a [ onClick (ShowArchiveConfirmationModal node) ]
+                , a
+                    [ onClick (ShowArchiveConfirmationModal node)
+                    , title "Archive Node"
+                    ]
                     [ icon "archive" False False
                     ]
                 ]
@@ -713,7 +725,10 @@ nodeRow model node =
                 [ text "" ]
 
         actions =
-            (a [ onClick (ToggleNodeChainInfoModal (Just node)) ]
+            (a
+                [ onClick (ToggleNodeChainInfoModal (Just node))
+                , title "View Node Chain Info"
+                ]
                 [ icon "info-circle" False False ]
             )
                 :: loggedActions
