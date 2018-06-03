@@ -271,7 +271,8 @@ defmodule WindshieldWeb.MonitorChannel do
           "status" => full_node.status,
           "votes_count" => full_node.votes_count,
           "vote_percentage" => full_node.vote_percentage,
-          "position" => full_node.position
+          "position" => full_node.position,
+          "bp_paused" => full_node.bp_paused
         }
 
         push(socket, "tick_node", node)
