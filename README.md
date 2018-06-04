@@ -55,34 +55,42 @@ sudo systemctl start mongod
 sudo systemctl enable mongod
 ```
 
-Setup your server basic general information on `~/windshield/backend/config/config.exs`, the file is self-explanatory and has instructions. After you setup all the basic info, create the file `~/windshield/backend/config/prod.secret.exs` in your production environment only with sensitive data.
+Now create the file `~/windshield/backend/config/prod.secret.exs` with your server specific data, like the below one:
 
 ```
 use Mix.Config
 
-config :mongodb, Mongo,
-  database: "windshield_v1"
+# here you setup any secret key hash and your public address + port for windshield
+config :windshield, WindshieldWeb.Endpoint,
+  secret_key_base: "SUPER_SECRET_KEY_BASE_HASH",
+  url: [host: "http://windshield.awesome.com", port: 80]
 
+# here you can setup a slack alert with your slack hook check
+# https://api.slack.com/custom-integrations/incoming-webhooks
+config :windshield, :slack_alert,
+  hook: "https://hooks.slack.com/services/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",
+  channel: "#notif-monitor"
+
+# this is the interface master password to setup the monitor nodes and settings
+# you can create your secret salt used to token generation
+config :windshield, Windshield.SystemAuth,
+  salt: "your_secret_salt",
+  password: "admin",
+  user: "admin"
+
+# setup your smtp settings
 config :windshield, Windshield.Mailer,
        server: "localhost",
        port: 25,
-       username: "myuser",
-       password: "mypass",
-       sender_email: "outbound@awesome.com"
-
-config :windshield, WindshieldWeb.Endpoint,
-  secret_key_base: "YOUR_SUPER_SECRET_HASH"
-
-config :windshield, :slack_alert,
-  hook: "https://hooks.slack.com/services/XXXXXX/YYYYY/ZZZZZZZZZ"
-
-config :windshield, Windshield.SystemAuth,
-  salt: "SUPER_SALT",
-  password: "mY#sUp3R@p4SsW0rD!",
-  user: "sadmin"
+       username: "",
+       password: "",
+       sender_email: "cypherglass.outbound@gmail.com",
+       recipients: [ "itguy@awesome.com", "superdev@awesome.com",
+       "1234567890@txt.att.net" ] # yes you can also send sms alerts!
 ```
 
-The above is only an example of the secret file, you can copy and paste and edit with your real values. Usually we do that because developers share the default `config.exs`, it should never have any sensitive production data, then the system admin can deploy all the production secret and sensitive parameters in the `prod.secret.exs` file.
+The above is only a few parameters that you can setup, you must copy, paste and edit with your real values.
+If you want to edit other basic settings check the config files under `~/windshield/backend/config` directory.
 
 Finally, to start the WINDSHIELD server:
 

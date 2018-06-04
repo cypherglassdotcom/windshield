@@ -561,7 +561,7 @@ nodesList model =
                     , th [] [ text "Type" ]
                     , th [] [ text "Last Prd Block" ]
                     , th [] [ text "Last Prd At" ]
-                    , th [] [ text "Votes" ]
+                    , th [] [ text "Vote Rank" ]
                     , th [] [ text "Status" ]
                     , th [] [ text "Head Block" ]
                     ]
@@ -709,12 +709,18 @@ nodeRow model node =
                 [ icon "info-circle" False False ]
                 :: loggedActions
 
-        ( lastPrdAt, lastPrdBlock, votePercentage ) =
+        voteText =
+            if node.votePosition == 9999 then
+                "?"
+            else
+                toString node.votePosition
+
+        ( lastPrdAt, lastPrdBlock, votePosition ) =
             case node.nodeType of
                 BlockProducer ->
                     ( calcTimeDiff node.lastProducedBlockAt model.currentTime
                     , toString node.lastProducedBlock
-                    , formatPercentage node.votePercentage
+                    , voteText
                     )
 
                 FullNode ->
@@ -723,7 +729,7 @@ nodeRow model node =
                 ExternalBlockProducer ->
                     ( calcTimeDiff node.lastProducedBlockAt model.currentTime
                     , toString node.lastProducedBlock
-                    , formatPercentage node.votePercentage
+                    , voteText
                     )
 
         alertIcon =
@@ -758,7 +764,7 @@ nodeRow model node =
             , td [] [ nodeTagger node.nodeType ]
             , td [] [ text lastPrdBlock ]
             , td [] [ text lastPrdAt ]
-            , td [] [ text votePercentage ]
+            , td [] [ text votePosition ]
             , td [] [ status ]
             , td [] [ text (toString node.headBlockNum) ]
             ]
