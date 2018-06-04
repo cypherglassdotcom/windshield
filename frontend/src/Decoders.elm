@@ -199,6 +199,7 @@ nodeDecoder =
         |> JDP.optional "vote_percentage" JD.float 0.0
         |> JDP.optional "is_archived" JD.bool False
         |> JDP.optional "position" JD.int 999
+        |> JDP.optional "bp_paused" JD.bool False
         |> JDP.hardcoded False
 
 

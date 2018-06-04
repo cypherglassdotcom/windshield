@@ -65,7 +65,7 @@ defmodule Windshield.Node do
       last_produced_block: last_produced_block,
       last_produced_block_at: last_produced_block_at,
       votes_count: 0,
-      vote_position: -1,
+      vote_position: 9999,
       vote_percentage: 0,
       settings: settings
     }
@@ -182,6 +182,7 @@ defmodule Windshield.Node do
     last_bpcheck_alert_at =
       with last_production_diff <- System.os_time() - last_production_datetime,
            false <- bp_paused, # do not alert if block production is paused
+           true <- state.vote_position <= 21, # should alert only if bp is under top 21
            true <-
              last_production_diff / 1_000_000_000 > state.settings["bp_tolerance_time_secs"],
            last_bpcheck_alert_interval <- System.os_time() - state.last_bpcheck_alert_at,
@@ -346,11 +347,11 @@ defmodule Windshield.Node do
   def check_bp_pause(state) do
     case EosApi.check_bp_pause(state.url) do
       {:ok, "true"} -> true
-      {:ok, "false"} -> true
+      {:ok, "false"} -> false
       {:error, err} ->
-        error = "#{state.name} >>> Fail to get #{state.url} - CONSIDERING FALSE \n #{inspect(err)}"
+        error = "#{state.name} >>> Fail to get #{state.url} - CONSIDERING LAST STATUS \n#{inspect(err)}"
         Logger.error(error)
-        false
+        state.bp_paused # if error, retrieves the last status till recovery
     end
   end
 

@@ -271,6 +271,7 @@ defmodule WindshieldWeb.MonitorChannel do
           "status" => full_node.status,
           "votes_count" => full_node.votes_count,
           "vote_percentage" => full_node.vote_percentage,
+          "vote_position" => full_node.vote_position,
           "position" => full_node.position,
           "bp_paused" => full_node.bp_paused
         }

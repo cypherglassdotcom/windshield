@@ -639,16 +639,22 @@ archivedNodeRow node =
 nodeRow : Model -> Node -> Html Msg
 nodeRow model node =
     let
+        ( bpIcon, bpPauseTxt ) =
+            if node.nodeType == BlockProducer && node.bpPaused then
+                ( "pause", "Block Production Paused" )
+            else
+                ( "circle", "" )
+
         ( iconName, className, pingTxt ) =
             case node.status of
                 Online ->
-                    ( "circle"
+                    ( bpIcon
                     , "has-text-success"
                     , "[" ++ toString node.pingMs ++ "ms]"
                     )
 
                 UnsynchedBlocks ->
-                    ( "circle"
+                    ( bpIcon
                     , "has-text-warning"
                     , "[Unsync]"
                     )
@@ -660,7 +666,7 @@ nodeRow model node =
                     ( "clock-o", "", "" )
 
         status =
-            span [ class className ]
+            span [ class className, title bpPauseTxt ]
                 [ icon iconName False False
                 , small [] [ text pingTxt ]
                 ]
