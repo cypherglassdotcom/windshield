@@ -49,6 +49,7 @@ defmodule Windshield.Node do
       type: type,
       position: position,
       status: :initial,
+      bp_paused: false,
       last_info: nil,
       last_head_block_num: 0,
       ping_stats: %{
@@ -64,7 +65,7 @@ defmodule Windshield.Node do
       last_produced_block: last_produced_block,
       last_produced_block_at: last_produced_block_at,
       votes_count: 0,
-      vote_position: -1,
+      vote_position: 9999,
       vote_percentage: 0,
       settings: settings
     }
@@ -161,6 +162,9 @@ defmodule Windshield.Node do
   end
 
   def handle_cast(:bpcheck, state) do
+    # check pause status
+    bp_paused = check_bp_pause(state)
+
     # apply UTC timezone
     last_produced_block_at = state.last_produced_block_at <> "Z"
 
@@ -177,6 +181,8 @@ defmodule Windshield.Node do
 
     last_bpcheck_alert_at =
       with last_production_diff <- System.os_time() - last_production_datetime,
+           false <- bp_paused, # do not alert if block production is paused
+           true <- state.vote_position <= 21, # should alert only if bp is under top 21
            true <-
              last_production_diff / 1_000_000_000 > state.settings["bp_tolerance_time_secs"],
            last_bpcheck_alert_interval <- System.os_time() - state.last_bpcheck_alert_at,
@@ -192,7 +198,7 @@ defmodule Windshield.Node do
         _ -> state.last_bpcheck_alert_at
       end
 
-    {:noreply, %{state | last_bpcheck_alert_at: last_bpcheck_alert_at}}
+    {:noreply, %{state | last_bpcheck_alert_at: last_bpcheck_alert_at, bp_paused: bp_paused}}
   end
 
   def handle_cast(:ping, state) do
@@ -335,6 +341,14 @@ defmodule Windshield.Node do
         error = "#{state.name} >>> Fail to get #{state.url} CHAIN INFO\n #{inspect(err)}"
         Logger.error(error)
         {state.last_info, -1, error}
+    end
+  end
+
+  def check_bp_pause(state) do
+    case EosApi.check_bp_pause(state.url) do
+      {:ok, true} -> true
+      {:ok, false} -> false
+      _ -> state.bp_paused # if error, retrieves the last status until it's recovered
     end
   end
 

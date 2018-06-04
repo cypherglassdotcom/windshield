@@ -16,6 +16,13 @@ defmodule Windshield.EosApi do
     |> validate_request()
   end
 
+  def check_bp_pause(url) do
+    url
+    |> Kernel.<>("/v1/producer/paused")
+    |> get(opts: [adapter: [timeout: 1_000]])
+    |> validate_request()
+  end
+
   def get_block_info(url, block_num) do
     url
     |> Kernel.<>("/v1/chain/get_block")

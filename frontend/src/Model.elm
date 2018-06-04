@@ -92,6 +92,7 @@ type alias Node =
     , votePercentage : Float
     , isArchived : Bool
     , position : Int
+    , bpPaused : Bool
     , isNew : Bool
     }
 
@@ -172,7 +173,7 @@ type alias Model =
 
 newNode : Node
 newNode =
-    Node "" "" 8888 False True Initial 0 0 0.0 0 0.0 BlockProducer 0.0 False 1 True
+    Node "" "" 8888 False True Initial 0 0 0.0 0 0.0 BlockProducer 0.0 False 1 False True
 
 
 type Msg
