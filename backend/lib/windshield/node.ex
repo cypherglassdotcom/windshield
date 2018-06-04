@@ -346,12 +346,9 @@ defmodule Windshield.Node do
 
   def check_bp_pause(state) do
     case EosApi.check_bp_pause(state.url) do
-      {:ok, "true"} -> true
-      {:ok, "false"} -> false
-      {:error, err} ->
-        error = "#{state.name} >>> Fail to get #{state.url} - CONSIDERING LAST STATUS \n#{inspect(err)}"
-        Logger.error(error)
-        state.bp_paused # if error, retrieves the last status till recovery
+      {:ok, true} -> true
+      {:ok, false} -> false
+      _ -> state.bp_paused # if error, retrieves the last status until it's recovered
     end
   end
 
