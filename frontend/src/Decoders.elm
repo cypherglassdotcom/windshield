@@ -196,7 +196,7 @@ nodeDecoder =
         |> JDP.optional "last_produced_block" JD.int 0
         |> JDP.optional "last_produced_block_at" isoStringToDateDecoder 0
         |> JDP.required "type" nodeTypeDecoder
-        |> JDP.optional "vote_percentage" JD.float 0.0
+        |> JDP.optional "vote_position" JD.int 9999
         |> JDP.optional "is_archived" JD.bool False
         |> JDP.optional "position" JD.int 999
         |> JDP.optional "bp_paused" JD.bool False

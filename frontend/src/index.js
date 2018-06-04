@@ -1,7 +1,6 @@
 import './main.css';
 import { Main } from './Main.elm';
 import registerServiceWorker from './registerServiceWorker';
-import Eos from 'eosjs'
 
 const STORAGE_KEY = "CGWINDSHIELD"
 

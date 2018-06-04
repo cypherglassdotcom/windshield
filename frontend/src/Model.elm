@@ -89,7 +89,7 @@ type alias Node =
     , lastProducedBlock : Int
     , lastProducedBlockAt : Time.Time
     , nodeType : NodeType
-    , votePercentage : Float
+    , votePosition : Int
     , isArchived : Bool
     , position : Int
     , bpPaused : Bool
@@ -173,7 +173,7 @@ type alias Model =
 
 newNode : Node
 newNode =
-    Node "" "" 8888 False True Initial 0 0 0.0 0 0.0 BlockProducer 0.0 False 1 False True
+    Node "" "" 8888 False True Initial 0 0 0.0 0 0.0 BlockProducer 9999 False 1 False True
 
 
 type Msg
