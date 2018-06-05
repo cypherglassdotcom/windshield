@@ -68,8 +68,8 @@ config :windshield, WindshieldWeb.Endpoint,
 # here you can setup a slack alert with your slack hook check
 # https://api.slack.com/custom-integrations/incoming-webhooks
 config :windshield, :slack_alert,
-  hook: "https://hooks.slack.com/services/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",
-  channel: "#notif-monitor"
+  hook: "https://hooks.slack.com/services/TZZ2KBQ7R/CBRFUSSNR/p5TV1Ow5VVHuMwp9Ue7jWzxv",
+  channel: "#general"
 
 # this is the interface master password to setup the monitor nodes and settings
 # you can create your secret salt used to token generation
@@ -84,7 +84,7 @@ config :windshield, Windshield.Mailer,
        port: 25,
        username: "",
        password: "",
-       sender_email: "cypherglass.outbound@gmail.com",
+       sender_email: "outbound@awesome.com",
        recipients: [ "itguy@awesome.com", "superdev@awesome.com",
        "1234567890@txt.att.net" ] # yes you can also send sms alerts!
 ```
