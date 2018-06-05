@@ -96,12 +96,17 @@ Finally, to start the WINDSHIELD server:
 
 ```
 cd ~/windshield/backend
+mix local.hex --force
+mix local.rebar
 mix deps.get
+MIX_ENV=prod mix compile
 ./start.sh
+
+# after a few seconds (10s) try:
 curl http://localhost:4000/api/health-check
 ```
 
-If the installation was successfull you should see an `"OK"` after the last command.
+If the installation was successfull you should see an `"OK"` after the last command. If you don't please open stderr.txt (in this very same directory) and open an issue with the occurred error.
 
 ### Frontend UI Installation
 
@@ -111,9 +116,7 @@ Here we assume that you have `node` & `npm` installed already in your server, th
 cd ~/windshield/frontend
 cp .env.example .env
 nano .env                   # SETUP YOUR DOMAIN/IP ADDRESSES
-npm install -g elm
-npm install -g elm-github-install
-npm install -g create-elm-app
+npm install -g elm elm-github-install create-elm-app
 npm install
 elm-app build
 ```
