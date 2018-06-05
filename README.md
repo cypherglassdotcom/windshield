@@ -110,18 +110,30 @@ If the installation was successfull you should see an `"OK"` after the last comm
 
 ### Frontend UI Installation
 
-Here we assume that you have `node` & `npm` installed already in your server, there are many ways to install it and we usually recommend the `nvm` one (check https://www.digitalocean.com/community/tutorials/how-to-install-node-js-on-ubuntu-16-04#how-to-install-using-nvm). After you install node (you can check by running `node -v`), follow the next steps to fully deploy the frontend HTML and JS static files.
+You can simply download our latest `frontend-build.zip` release from the [Releases Page](https://github.com/cypherglassdotcom/windshield/releases) and change the following line inside `index.html` with your server address:
+
+```
+APP_BACKEND_SERVER="http://localhost:4000",APP_SOCKET_SERVER="ws://localhost:4000/socket/websocket"
+```
+
+If you want to compile the frontend, we will assume that you have `node` & `npm` installed already in your server, there are many ways to install it and we usually recommend the `nvm` one (check https://www.digitalocean.com/community/tutorials/how-to-install-node-js-on-ubuntu-16-04#how-to-install-using-nvm).
+
+After node installation is done (you can check by running `node -v`), follow the next steps to fully deploy the frontend HTML and JS static files.
 
 ```
 cd ~/windshield/frontend
-cp .env.example .env
-nano .env                   # SETUP YOUR DOMAIN/IP ADDRESSES
+nano public/index.html       # set the APP_BACKEND_SERVER and APP_SOCKET_SERVER
 npm install -g elm elm-github-install create-elm-app
 npm install
 elm-app build
 ```
 
-From the above steps you will have a `build` folder. This is the folder that you will put in your webserver. Assuming that you have Apache2, you can just put it on the root webserver folder (it must be in a root address to work - you can use `domain.com`, `windshield.domain.com`, so on, but does not work in a regular subpath like `domain.com/windshield`):
+
+### Frontend UI Deploy
+
+From the prior steps you will have a `build` folder or the zipped release. This is the folder that you will put in your webserver.
+
+Assuming that you have Apache2, you can just put it on the root webserver folder (it must be in a root address to work - you can use `domain.com`, `windshield.domain.com`, so on, but does not work in a regular subpath like `domain.com/windshield`):
 
 ```
 sudo rm -rf /var/www/html
