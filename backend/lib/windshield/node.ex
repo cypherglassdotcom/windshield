@@ -285,7 +285,8 @@ defmodule Windshield.Node do
     }
 
     if new_state.vote_position != state.vote_position &&
-         state.vote_position > 0 && state.is_watchable do
+         state.vote_position > 0 && state.vote_position != 9999 &&
+         state.is_watchable do
       msg = """
       The BP #{state.account} has changed the voting position rank
       from #{state.vote_position} to #{new_state.vote_position}.
