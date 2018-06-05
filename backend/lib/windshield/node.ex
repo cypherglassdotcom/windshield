@@ -166,30 +166,23 @@ defmodule Windshield.Node do
     bp_paused = check_bp_pause(state)
 
     # apply UTC timezone
-    last_produced_block_at = state.last_produced_block_at <> "Z"
-
-    last_production_datetime =
-      case DateTime.from_iso8601(last_produced_block_at) do
-        {:ok, datetime, 0} ->
-          DateTime.to_unix(datetime) * 1_000_000_000
-
-        {:error, _} ->
-          0
-      end
+    {last_produced_block_at, last_production_datetime} =
+      calc_production_time(state.last_produced_block_at)
 
     same_alert_interval = state.settings["same_alert_interval_mins"] * 60_000_000_000
 
+    last_production_diff_secs = (System.os_time() - last_production_datetime) / 1_000_000_000
+
     last_bpcheck_alert_at =
-      with last_production_diff <- System.os_time() - last_production_datetime,
-           false <- bp_paused, # do not alert if block production is paused
+      with false <- bp_paused, # do not alert if block production is paused
            true <- state.vote_position <= 21, # should alert only if bp is under top 21
            true <-
-             last_production_diff / 1_000_000_000 > state.settings["bp_tolerance_time_secs"],
+             last_production_diff_secs > state.settings["bp_tolerance_time_secs"],
            last_bpcheck_alert_interval <- System.os_time() - state.last_bpcheck_alert_at,
            true <- last_bpcheck_alert_interval > same_alert_interval do
         error = """
         Block Producer Node #{state.name} is not producing for a while.
-        Last Block production registered at #{state.last_produced_block_at} UTC.
+        Last Block production registered at #{last_produced_block_at} UTC.
         """
 
         Database.insert_alert(Alerts.bp_not_producing(), error, nil)
@@ -221,6 +214,7 @@ defmodule Windshield.Node do
 
         {:error, last_ping_alert}
       else
+        broadcast_restored_ping(state)
         {:active, state.last_ping_alert_at}
       end
 
@@ -253,20 +247,33 @@ defmodule Windshield.Node do
     {:noreply, new_state}
   end
 
-  def handle_cast({:update_block, block_info}, state) do
-    if block_info["producer"] == state.account do
-      last_produced_block = block_info["block_num"]
-      last_produced_block_at = block_info["timestamp"]
+  def handle_cast({:update_produced_block, block_info}, state) do
+    new_produced_block = block_info["block_num"]
+    new_produced_block_at = block_info["timestamp"]
 
-      {:noreply,
-       %{
-         state
-         | last_produced_block: last_produced_block,
-           last_produced_block_at: last_produced_block_at
-       }}
-    else
-      {:noreply, state}
+    {last_produced_block_at, last_production_datetime} =
+      calc_production_time(state.last_produced_block_at)
+
+    {new_produced_block_at_txt, new_production_datetime} =
+      calc_production_time(new_produced_block_at)
+
+    if last_production_datetime < state.last_bpcheck_alert_at &&
+      new_production_datetime > state.last_bpcheck_alert_at do
+      msg =
+        """
+        Block Producer Node #{state.name} came back at full steam production!
+        New Block production registered at #{new_produced_block_at_txt} UTC,
+        and the last one before that was #{last_produced_block_at}.
+        """
+      Database.insert_alert(Alerts.restored_production(), msg)
     end
+
+    {:noreply,
+      %{
+        state
+        | last_produced_block: new_produced_block,
+          last_produced_block_at: new_produced_block_at
+      }}
   end
 
   def handle_cast({:update_votes, votes_count, vote_percentage, bp_vote_position}, state) do
@@ -277,14 +284,21 @@ defmodule Windshield.Node do
         vote_position: bp_vote_position
     }
 
-    if new_state.vote_position != state.vote_position && state.type == "BP" &&
+    if new_state.vote_position != state.vote_position &&
          state.vote_position > 0 && state.is_watchable do
       msg = """
       The BP #{state.account} has changed the voting position rank
       from #{state.vote_position} to #{new_state.vote_position}.
       """
 
-      Database.insert_alert(Alerts.voting_position(), msg, nil)
+      alert_type =
+        if new_state.vote_position < state.vote_position do
+          Alerts.restored_voting_position()
+        else
+          Alerts.voting_position()
+        end
+
+      Database.insert_alert(alert_type, msg, nil)
     end
 
     {:noreply, new_state}
@@ -329,6 +343,22 @@ defmodule Windshield.Node do
     }
   end
 
+  def calc_production_time(last_prod_time) do
+    # apply UTC timezone
+    last_produced_block_at = last_prod_time <> "Z"
+
+    last_production_datetime =
+      case DateTime.from_iso8601(last_produced_block_at) do
+        {:ok, datetime, 0} ->
+          DateTime.to_unix(datetime) * 1_000_000_000
+
+        {:error, _} ->
+          0
+      end
+
+    {last_produced_block_at, last_production_datetime}
+  end
+
   def ping_info(state) do
     start = System.os_time()
 
@@ -367,6 +397,14 @@ defmodule Windshield.Node do
       System.os_time()
     else
       last_ping_alert_at
+    end
+  end
+
+  def broadcast_restored_ping(state) do
+    # only send alert if it had an error status before
+    if state.status == :error do
+      msg = "#{state.account} answered a successful ping and it's now restored!"
+      Database.insert_alert(Alerts.restored_ping(), msg)
     end
   end
 

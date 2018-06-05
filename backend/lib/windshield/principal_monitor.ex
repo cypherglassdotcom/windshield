@@ -209,7 +209,7 @@ defmodule Windshield.PrincipalMonitor do
           do_process_block(state.stats, state.producers, processing_block, info)
 
         # update respective node
-        GenServer.cast(String.to_atom(info["producer"]), {:update_block, info})
+        GenServer.cast(String.to_atom(info["producer"]), {:update_produced_block, info})
 
         # update state
         new_state = %{state | stats: new_stats, producers: updated_producers}
