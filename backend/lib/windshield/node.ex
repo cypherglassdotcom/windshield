@@ -173,11 +173,12 @@ defmodule Windshield.Node do
 
     last_production_diff_secs = (System.os_time() - last_production_datetime) / 1_000_000_000
 
+    # do not alert if block production is paused
     last_bpcheck_alert_at =
-      with false <- bp_paused, # do not alert if block production is paused
-           true <- state.vote_position <= 21, # should alert only if bp is under top 21
-           true <-
-             last_production_diff_secs > state.settings["bp_tolerance_time_secs"],
+      with false <- bp_paused,
+           # should alert only if bp is under top 21
+           true <- state.vote_position <= 21,
+           true <- last_production_diff_secs > state.settings["bp_tolerance_time_secs"],
            last_bpcheck_alert_interval <- System.os_time() - state.last_bpcheck_alert_at,
            true <- last_bpcheck_alert_interval > same_alert_interval do
         error = """
@@ -258,22 +259,22 @@ defmodule Windshield.Node do
       calc_production_time(new_produced_block_at)
 
     if last_production_datetime < state.last_bpcheck_alert_at &&
-      new_production_datetime > state.last_bpcheck_alert_at do
-      msg =
-        """
-        Block Producer Node #{state.name} came back at full steam production!
-        New Block production registered at #{new_produced_block_at_txt} UTC,
-        and the last one before that was #{last_produced_block_at}.
-        """
+         new_production_datetime > state.last_bpcheck_alert_at do
+      msg = """
+      Block Producer Node #{state.name} came back at full steam production!
+      New Block production registered at #{new_produced_block_at_txt} UTC,
+      and the last one before that was #{last_produced_block_at}.
+      """
+
       Database.insert_alert(Alerts.restored_production(), msg)
     end
 
     {:noreply,
-      %{
-        state
-        | last_produced_block: new_produced_block,
-          last_produced_block_at: new_produced_block_at
-      }}
+     %{
+       state
+       | last_produced_block: new_produced_block,
+         last_produced_block_at: new_produced_block_at
+     }}
   end
 
   def handle_cast({:update_votes, votes_count, vote_percentage, bp_vote_position}, state) do
@@ -284,9 +285,8 @@ defmodule Windshield.Node do
         vote_position: bp_vote_position
     }
 
-    if new_state.vote_position != state.vote_position &&
-         state.vote_position > 0 && state.vote_position != 9999 &&
-         state.is_watchable do
+    if new_state.vote_position != state.vote_position && state.vote_position > 0 &&
+         state.vote_position != 9999 && state.is_watchable do
       msg = """
       The BP #{state.account} has changed the voting position rank
       from #{state.vote_position} to #{new_state.vote_position}.
@@ -377,9 +377,15 @@ defmodule Windshield.Node do
 
   def check_bp_pause(state) do
     case EosApi.check_bp_pause(state.url) do
-      {:ok, true} -> true
-      {:ok, false} -> false
-      _ -> state.bp_paused # if error, retrieves the last status until it's recovered
+      {:ok, true} ->
+        true
+
+      {:ok, false} ->
+        false
+
+      # if error, retrieves the last status until it's recovered
+      _ ->
+        state.bp_paused
     end
   end
 

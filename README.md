@@ -133,16 +133,16 @@ elm-app build
 
 From the prior steps you will have a `build` folder or the zipped release. This is the folder that you will put in your webserver.
 
-Assuming that you have Apache2, you can just put it on the root webserver folder (it must be in a root address to work - you can use `domain.com`, `windshield.domain.com`, so on, but does not work in a regular subpath like `domain.com/windshield`):
+Assuming that you have Apache2, you can just put it on the root webserver folder (it must be in a root address to work - you can use `domain.com`, `windshield.domain.com`, so on, but does not work in a regular subpath like `domain.com/windshield` ):
 
 ```
 sudo rm -rf /var/www/html
 sudo cp -R build /var/www/html
 ```
 
-Just open your webserver address and if everything is correct you will receive a green success toast saying: `"Connected to WINDSHIELD Server"`
+Just open your webserver address and if everything is correct you will receive a green success toast saying: `"Connected to WINDSHIELD Server"` - If you don't see this message you should setup your webserver properly to serve the backend endpoints.
 
-Config file sample `/etc/apache2/sites-enabled/000-default.conf` for Apache2:
+Here's a config file sample `/etc/apache2/sites-enabled/000-default.conf` for Apache2:
 
 ```
 <VirtualHost *:80>
@@ -172,6 +172,12 @@ sudo a2enmod proxy_http
 sudo a2enmod proxy_wstunnel
 sudo a2enmod rewrite
 sudo service apache2 restart
+```
+
+This Apache configuration sets up a proxy that, if your server domain is www.example.com, everything that goes to www.example.com/api will hit the backend http://localhost:4000 and the websockets connecteds to www.example.com/ws will hit the websocket channel at ws://localhost:4000, therefore you should adjust your index.html to your domain:
+
+```
+APP_BACKEND_SERVER="http://www.example.com/api",APP_SOCKET_SERVER="ws://www.example.com/ws/socket/websocket"
 ```
 
 ### Nodes Setup
