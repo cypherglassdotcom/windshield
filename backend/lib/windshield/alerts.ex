@@ -10,15 +10,21 @@ defmodule Windshield.Alerts do
   import WindshieldWeb, only: [main_address: 0]
 
   @unanswered_ping "UNANSWERED_PING"
+  @restored_ping "RESTORED_PING"
   @bp_not_producing "BP_NOT_PRODUCING"
+  @restored_production "RESTORED_PRODUCTION"
   @unsynched_blocks "UNSYNCHED_BLOCKS"
   @voting_position "VOTING_POSITION"
+  @restored_voting_position "RESTORED_VOTING_POSITION"
   @nodes_full_fork_report "NODES_FULL_FORK_REPORT"
 
   def unanswered_ping, do: @unanswered_ping
+  def restored_ping, do: @restored_ping
   def bp_not_producing, do: @bp_not_producing
+  def restored_production, do: @restored_production
   def unsynched_blocks, do: @unsynched_blocks
   def voting_position, do: @voting_position
+  def restored_voting_position, do: @restored_voting_position
   def nodes_full_fork_report, do: @nodes_full_fork_report
 
   def alert_mail(type, description) do

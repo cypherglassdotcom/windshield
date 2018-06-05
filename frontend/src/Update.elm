@@ -381,8 +381,14 @@ update msg model =
                         alerts =
                             alert :: model.alerts
 
+                        alertType =
+                            if String.startsWith "RESTORED_" alert.alertType then
+                                (Success alert.description)
+                            else
+                                (Error alert.description)
+
                         notifications =
-                            Notification (Error alert.description) model.currentTime (toString alert.createdAt)
+                            Notification alertType model.currentTime (toString alert.createdAt)
                                 :: model.notifications
                     in
                         ( { model | alerts = alerts, notifications = notifications }
