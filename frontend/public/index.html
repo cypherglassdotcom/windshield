@@ -13,6 +13,17 @@
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json">
     <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico">
     <title>Cypherglass WINDSHIELD</title>
+    <script>
+
+        // this is the elixir backend default address, change to your
+        // EXTERNAL/INTRANET ip or domain because this is what the browser tries to connect
+        APP_BACKEND_SERVER= 'http://localhost:4000'
+
+        // this is the elixir websocket default address, change to your
+        // EXTERNAL/INTRANET ip or domain because this is what the browser tries to connect
+        APP_SOCKET_SERVER = 'ws://localhost:4000/socket/websocket';
+
+    </script>
 </head>
 <body>
     <noscript>
