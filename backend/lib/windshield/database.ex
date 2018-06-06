@@ -197,7 +197,9 @@ defmodule Windshield.Database do
         "bp_tolerance_time_secs" => 180,
         "unsynched_blocks_to_alert" => 20,
         "failed_pings_to_alert" => 20,
-        "calc_votes_interval_secs" => 300
+        "calc_votes_interval_secs" => 300,
+        "auto_load_external_bps" => 30,
+        "auto_archive_external_bps" => 35
       }
 
       create_settings(new_settings)

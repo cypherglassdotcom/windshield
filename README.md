@@ -27,9 +27,13 @@ You need to prepare your server to have the backend elixir process always runnin
 
 Prepare the WINDSHIELD root folder by cloning this repo, we will call it the WINDSHIELD root folder.
 
-`~/windshield`
+```
+cd ~
+git clone https://github.com/cypherglassdotcom/windshield.git
+cd ~/windshield
+```
 
-Now, follow the next steps to fully setup WINDSHIELD.
+Now, follow the next steps to fully setup WINDSHIELD. Usually you will want to create a `windshield` user on your server to go over the next steps and installation instructions.
 
 ### Backend Installation
 
@@ -89,8 +93,8 @@ config :windshield, Windshield.Mailer,
        "1234567890@txt.att.net" ] # yes you can also send sms alerts!
 ```
 
-The above is only a few parameters that you can setup, you must copy, paste and edit with your real values.
-If you want to edit other basic settings check the config files under `~/windshield/backend/config` directory.
+The above file represents some of the parameters that can be changed. Copy, paste and edit with your specific values.
+Other basic settings can be changed in the config files under `~/windshield/backend/config` directory.
 
 Finally, to start the WINDSHIELD server:
 
@@ -108,13 +112,15 @@ curl http://localhost:4000/api/health-check
 
 If the installation was successfull you should see an `"OK"` after the last command. If you don't please open stderr.txt (in this very same directory) and open an issue with the occurred error.
 
-### Frontend UI Installation
+### Frontend UI Installation from Release
 
-You can simply download our latest `frontend-build.zip` release from the [Releases Page](https://github.com/cypherglassdotcom/windshield/releases) and change the following line inside `index.html` with your server address:
+You can simply download our latest `frontend-build.zip` release from the [Releases Page](https://github.com/cypherglassdotcom/windshield/releases), unzip it on your webserver root folder (for Apache2 it's usually `/var/www/html`) and change the following line inside `index.html` with your server address:
 
 ```
 APP_BACKEND_SERVER="http://localhost:4000",APP_SOCKET_SERVER="ws://localhost:4000/socket/websocket"
 ```
+
+### Frontend UI Compilation (skip if you downloaded the above release)
 
 If you want to compile the frontend, we will assume that you have `node` & `npm` installed already in your server, there are many ways to install it and we usually recommend the `nvm` one (check https://www.digitalocean.com/community/tutorials/how-to-install-node-js-on-ubuntu-16-04#how-to-install-using-nvm).
 
@@ -128,14 +134,20 @@ npm install
 elm-app build
 ```
 
-
 ### Frontend UI Deploy
 
 From the prior steps you will have a `build` folder or the zipped release. This is the folder that you will put in your webserver.
 
-Assuming that you have Apache2, you can just put it on the root webserver folder (it must be in a root address to work - you can use `domain.com`, `windshield.domain.com`, so on, but does not work in a regular subpath like `domain.com/windshield` ):
+Assuming that you have Apache2, you can just put it on the root webserver folder (it must be in a root address to work - you can use `domain.com`, `windshield.domain.com`, so on, but does not work in a regular subpath like `domain.com/windshield`):
 
 ```
+# for release zipped build version
+sudo rm -rf /var/www/html
+sudo mkdir /var/www/html
+sudo cp frontend-build.zip /var/www/html/frontend-build.zip
+cd /var/www/html && sudo unzip frontend-build.zip
+
+# for compiled build version
 sudo rm -rf /var/www/html
 sudo cp -R build /var/www/html
 ```
@@ -184,7 +196,7 @@ APP_BACKEND_SERVER="http://www.example.com/api",APP_SOCKET_SERVER="ws://www.exam
 
 Ok, now that you had setup the server it's the fun time! Let's setup your nodes so you can keep track of them and receive any crictical alerts and keep watching their synchronization and performance.
 
-1. Click in the `locker` icon and enter the password you setup on the backend configs.
+1. Click in the `locker` icon and enter the password you setup on the `prod.secret.exs` file, it's the master password.
 1. Now click in add node and add your main BlockProducer info. It's important that you put the same name of the EOS block producer account, so we can give you stats of when you are producing or not. WINDSHIELD uses this node as the principal one to monitor blocks production.
 1. Now click in add node and add your full nodes info, you can put any account name because it your public nodes does not have an account anyways, just set a unique name for easy identification as `fullnode.us1`.
 1. After you setup your block producer node and full nodes, click in `Settings` on the top menu and edit the form with your preferred options and add your Block Producer as the Principal Node account. Usually the default settings are good to start and you don't need to play with it, but you can always adjust later.
