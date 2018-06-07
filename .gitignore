@@ -23,3 +23,4 @@ Thumbs.db
 .env
 
 my-deploy.sh
+deploy.sh
