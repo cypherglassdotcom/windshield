@@ -2,17 +2,41 @@
 
 ![Cypherglass WINDSHIELD](https://github.com/cypherglassdotcom/windshield/raw/master/banner.png "Cypherglass WINDSHIELD")
 
-WINDSHIELD is a tool for Block Producers to monitor their EOS Infrastructure.
-It is designed to run from a privileged host inside your intranet and provide data on all nodes, even those that are not exposed to the internet.
+WINDSHIELD A dashboard tool for monitoring internal Block Producer infrastructure.  This tool was designed to run inside a Block Producer’s firewall.  With access to all the BP’s internal nodes, it will alert the BP to issues with their nodes that might not otherwise be apparent.
 
-## Functionalities
 
-1. Alert when the principal Block Producer node has not created a block in X time.
-1. Alert if our node forks or become unsynced.
-1. Alert if our node stops responding.
-1. Alert if our Full nodes aren't in sync with our BP.
-1. Alert when our node moves in the vote list (like if we move from the node with the 5th highest votes to the 6th highest)
-1. Alert if 1/3 of BPs are off - in this case BPs need to fix the network.
+## List of Alerting Functionality
+
+* Block creation
+    - Receive alerts if your Block Producer node has not produced blocks in a specified period of time..
+* Forked/unsynchronized node
+    - Windshield will let you know if your node has become forked or unsynchronized.
+* Handshake response
+    - Windshield constantly checks to insure that your node is up and running.
+* Full Node to Block Producer node synchronization
+    - If your Full Nodes aren’t talking to your Block Producer node Windshield will send you an alert.
+* BP vote movement
+    - When your node shifts up or down in position among Block Producers Windshield will tell you.
+* Availability of one third of block producers
+    - If the number of Block Producers available drops below fourteen, Windshield will send you an alert.
+
+
+## Alerting Formats
+
+* Web based executive dashboard
+* Email
+* SMS
+* Slack
+
+## Type of Nodes
+
+* Block Producer
+* Full Node
+* External Node
+
+##  Installation
+
+Please feel free to follow the next steps of this document to download and install the latest version of Windshield.
 
 ## WINDSHIELD Structure
 
