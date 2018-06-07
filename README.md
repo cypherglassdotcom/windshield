@@ -38,9 +38,6 @@ WINDSHIELD is A dashboard tool for monitoring internal Block Producer infrastruc
 
 Please feel free to follow the next steps of this document to download and install the latest version of Windshield.
 
-```
-
-
 ## WINDSHIELD Structure
 
 ```
