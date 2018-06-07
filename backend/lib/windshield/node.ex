@@ -10,6 +10,8 @@ defmodule Windshield.Node do
   alias Windshield.Alerts
   alias Windshield.EosApi
 
+  @invalid_ping -1
+
   require Logger
 
   def start_link(options) do
@@ -126,11 +128,11 @@ defmodule Windshield.Node do
 
         status =
           cond do
-            unsynched_blocks ->
-              :unsynched_blocks
-
             state.status == :error ->
               :error
+
+            unsynched_blocks && current_block_num > 0 ->
+              :unsynched_blocks
 
             true ->
               :active
@@ -198,12 +200,21 @@ defmodule Windshield.Node do
   def handle_cast(:ping, state) do
     {info_body, ping, error} = ping_info(state)
 
+    # update last head block num
+    {ping, last_head_block_num} =
+      case info_body do
+        %{"head_block_num" => num} ->
+          {ping, num}
+        _ ->
+          {@invalid_ping, state.last_head_block_num} # if has invalid body, change the ping to invalid
+      end
+
     new_ping_stats = calc_ping_stats(state, ping)
 
     ping_failures = new_ping_stats.ping_failures_since_last_success
 
     {status, last_alert} =
-      if ping < 0 && ping_failures > state.settings["failed_pings_to_alert"] do
+      if ping == @invalid_ping && ping_failures > state.settings["failed_pings_to_alert"] do
         last_ping_alert =
           broadcast_ping_alert(
             state.settings["same_alert_interval_mins"],
@@ -225,13 +236,6 @@ defmodule Windshield.Node do
         :unsynched_blocks
       else
         status
-      end
-
-    # update last head block num
-    last_head_block_num =
-      case info_body do
-        %{"head_block_num" => num} -> num
-        _ -> state.last_head_block_num
       end
 
     new_state = %{
@@ -371,7 +375,7 @@ defmodule Windshield.Node do
       {:error, err} ->
         error = "#{state.name} >>> Fail to get #{state.url} CHAIN INFO\n #{inspect(err)}"
         Logger.error(error)
-        {state.last_info, -1, error}
+        {state.last_info, @invalid_ping, error}
     end
   end
 
