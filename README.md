@@ -2,7 +2,7 @@
 
 ![Cypherglass WINDSHIELD](https://github.com/cypherglassdotcom/windshield/raw/master/banner.png "Cypherglass WINDSHIELD")
 
-WINDSHIELD is A dashboard tool for monitoring internal Block Producer infrastructure.  This tool was designed to run inside a Block Producer’s firewall.  With access to all the BP’s internal nodes, it will alert the BP to issues with their nodes that might not otherwise be apparent.
+WINDSHIELD is a dashboard tool for monitoring internal Block Producer infrastructure.  This tool was designed to run inside a Block Producer’s firewall.  With access to all the BP’s internal nodes, it will alert the BP to issues with their nodes that might not otherwise be apparent.
 
 
 ## List of Alerting Functionality
