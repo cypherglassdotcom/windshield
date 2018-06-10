@@ -152,6 +152,8 @@ defmodule Windshield.PrincipalMonitor do
           new_state
 
         _ ->
+          # broadcast to websocket the last status
+          tick_stats(state)
           state
       end
 
@@ -215,8 +217,7 @@ defmodule Windshield.PrincipalMonitor do
         new_state = %{state | stats: new_stats, producers: updated_producers}
 
         # broadcast to websocket
-        tick_stats = new_stats |> Map.put("status", state.status)
-        WindshieldWeb.Endpoint.broadcast("monitor:main", "tick_stats", tick_stats)
+        tick_stats(new_state)
 
         # update ets and log info
         :ets.insert(new_state.name, {"state", new_state})
@@ -253,6 +254,11 @@ defmodule Windshield.PrincipalMonitor do
 
         %{state | block_processing: -1, status: :active}
     end
+  end
+
+  def tick_stats(state) do
+    stats = state.stats |> Map.put("status", state.status)
+    WindshieldWeb.Endpoint.broadcast("monitor:main", "tick_stats", stats)
   end
 
   def initialize_block_processing(state) do
