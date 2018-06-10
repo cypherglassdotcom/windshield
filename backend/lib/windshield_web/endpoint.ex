@@ -44,7 +44,7 @@ defmodule WindshieldWeb.Endpoint do
     signing_salt: "HonAr6FB"
   )
 
-  plug(CORSPlug, origin: &WindshieldWeb.main_address/0)
+  plug(CORSPlug)
 
   plug(WindshieldWeb.Router)
 
