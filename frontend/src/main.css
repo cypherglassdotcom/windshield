@@ -241,7 +241,10 @@
   padding-left: 8rem; }
 
 .topcg.navbar {
-  background-color: #23114f; }
+  background-color: #23114f;
+  height: 120px;
+  align-items: stretch;
+  display: flex; }
   .topcg.navbar .icon {
     margin-right: 2px; }
   .topcg.navbar .navbar-item {
@@ -252,32 +255,35 @@
     .topcg.navbar .navbar-item:hover {
       background-color: #23114f;
       font-weight: 700; }
+  @media (max-width: 1217px) {
+    .topcg.navbar .navbar-item-text {
+      display: none; } }
   .topcg.navbar .monitor-stats {
     margin-left: 18px;
     font-size: 14px;
     font-weight: 400;
-    font-family: BlinkMacSystemFont, -apple-system, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", "Helvetica", "Arial", sans-serif; }
+    font-family: BlinkMacSystemFont, -apple-system, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+    width: 200px; }
+  .topcg.navbar .logo {
+    font-family: 'Montserrat', sans-serif;
+    color: #fff;
+    font-weight: 700;
+    font-size: 28px;
+    margin: 24px; }
+    .topcg.navbar .logo .title-span {
+      margin-left: 8px;
+      margin-top: 10px;
+      margin-right: 12px; }
+    .topcg.navbar .logo .logo-img {
+      max-width: 240px;
+      height: 80px;
+      margin-top: -10px; }
 
 .node-position {
   font-size: 10px; }
 
 .producer-row {
   background: greenyellow; }
-
-.logo {
-  font-family: 'Montserrat', sans-serif;
-  color: #fff;
-  font-weight: 700;
-  font-size: 28px;
-  margin: 24px; }
-  .logo span {
-    margin-left: 8px;
-    margin-top: 10px;
-    margin-right: 12px; }
-  .logo img {
-    max-width: 240px;
-    height: 80px;
-    margin-top: -10px; }
 
 .field-read {
   padding: 8px;
@@ -287,9 +293,6 @@
 
 form {
   margin-bottom: 20px; }
-
-.help-button {
-  margin-right: 40px; }
 
 .new-monster-button {
   margin: 25px; }

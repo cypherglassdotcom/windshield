@@ -295,7 +295,7 @@ topMenu model =
         logButton =
             if not (String.isEmpty model.user.token) then
                 a
-                    [ class "navbar-item help-button"
+                    [ class "navbar-item"
                     , onClick Logout
                     ]
                     [ span [ class "navbar-item icon is-small" ]
@@ -303,7 +303,7 @@ topMenu model =
                     ]
             else
                 a
-                    [ class "navbar-item help-button"
+                    [ class "navbar-item"
                     , onClick ToggleAdminLoginModal
                     ]
                     [ span [ class "navbar-item icon is-small" ]
@@ -323,7 +323,7 @@ topMenu model =
 
         helpButton =
             a
-                [ class "navbar-item help-button"
+                [ class "navbar-item"
                 , onClick ToggleHelp
                 ]
                 [ span [ class "navbar-item icon is-small" ]
@@ -333,19 +333,19 @@ topMenu model =
         monitorButton =
             a [ class ("navbar-item " ++ isActiveMonitorClass), onClick (SetContent Home) ]
                 [ icon "dashboard" False False
-                , text "Dashboard"
+                , span [ class "navbar-item-text" ] [ text "Dashboard" ]
                 ]
 
         alertsButton =
             a [ class ("navbar-item " ++ isActiveAlertsClass), onClick (SetContent Alerts) ]
                 [ icon "bell" False False
-                , text "Alerts"
+                , span [ class "navbar-item-text" ] [ text "Alerts" ]
                 ]
 
         settingsButton =
             a [ class ("navbar-item " ++ isActiveSettingsClass), onClick (SetContent SettingsView) ]
                 [ icon "cog" False False
-                , text "Settings"
+                , span [ class "navbar-item-text" ] [ text "Settings" ]
                 ]
 
         soundIcon =
@@ -402,13 +402,13 @@ topMenu model =
             , attribute "role" "navigation"
             ]
             [ div [ class "navbar-brand logo" ]
-                [ img [ src "/logo_horizontal.svg" ] []
-                , span [] [ text "WINDSHIELD" ]
+                [ img [ class "logo-img", src "/logo_horizontal.svg" ] []
+                , span [ class "title-span" ] [ text "WINDSHIELD" ]
                 , div [ class "monitor-stats" ]
                     [ monitorConnectionStatus
-                    , p [] [ text ("Last Synched Block: " ++ toString model.monitorState.lastBlockNum) ]
+                    , p [] [ text ("Last Sync.Block: " ++ toString model.monitorState.lastBlockNum) ]
                     , p [ class "has-text-warning" ]
-                        [ text "Current Producer: "
+                        [ text "Current Prod: "
                         , b [] [ text currentProducer ]
                         ]
                     ]

@@ -11,6 +11,9 @@ $cg-color: #23114f;
 
 .topcg.navbar {
   background-color: $cg-color;
+  height: 120px;
+  align-items: stretch;
+  display: flex;
 
   .icon {
     margin-right: 2px;
@@ -30,11 +33,38 @@ $cg-color: #23114f;
     }
   }
 
+  @media (max-width: 1217px) {
+    .navbar-item-text {
+      display: none;
+    }
+  }
+
   .monitor-stats {
     margin-left: 18px;
     font-size: 14px;
     font-weight: 400;
     font-family: $family-sans-serif;
+    width: 200px;
+  }
+
+  .logo {
+    font-family: 'Montserrat', sans-serif;
+    color: #fff;
+    font-weight: 700;
+    font-size: 28px;
+    margin: 24px;
+
+    .title-span {
+      margin-left: 8px;
+      margin-top: 10px;
+      margin-right: 12px;
+    }
+
+    .logo-img {
+      max-width: 240px;
+      height: 80px;
+      margin-top: -10px;
+    }
   }
 }
 
@@ -44,26 +74,6 @@ $cg-color: #23114f;
 
 .producer-row {
   background: greenyellow;
-}
-
-.logo {
-  font-family: 'Montserrat', sans-serif;
-  color: #fff;
-  font-weight: 700;
-  font-size: 28px;
-  margin: 24px;
-
-  span {
-    margin-left: 8px;
-    margin-top: 10px;
-    margin-right: 12px;
-  }
-
-  img {
-    max-width: 240px;
-    height: 80px;
-    margin-top: -10px;
-  }
 }
 
 .field-read {
@@ -76,10 +86,6 @@ $cg-color: #23114f;
 // layout
 form {
   margin-bottom: 20px;
-}
-
-.help-button {
-  margin-right: 40px;
 }
 
 .new-monster-button {
