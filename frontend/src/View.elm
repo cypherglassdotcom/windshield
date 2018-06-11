@@ -295,7 +295,7 @@ topMenu model =
         logButton =
             if not (String.isEmpty model.user.token) then
                 a
-                    [ class "navbar-item help-button"
+                    [ class "navbar-item"
                     , onClick Logout
                     ]
                     [ span [ class "navbar-item icon is-small" ]
@@ -303,7 +303,7 @@ topMenu model =
                     ]
             else
                 a
-                    [ class "navbar-item help-button"
+                    [ class "navbar-item"
                     , onClick ToggleAdminLoginModal
                     ]
                     [ span [ class "navbar-item icon is-small" ]
@@ -323,7 +323,7 @@ topMenu model =
 
         helpButton =
             a
-                [ class "navbar-item help-button"
+                [ class "navbar-item"
                 , onClick ToggleHelp
                 ]
                 [ span [ class "navbar-item icon is-small" ]
@@ -333,19 +333,19 @@ topMenu model =
         monitorButton =
             a [ class ("navbar-item " ++ isActiveMonitorClass), onClick (SetContent Home) ]
                 [ icon "dashboard" False False
-                , text "Dashboard"
+                , span [ class "navbar-item-text" ] [ text "Dashboard" ]
                 ]
 
         alertsButton =
             a [ class ("navbar-item " ++ isActiveAlertsClass), onClick (SetContent Alerts) ]
                 [ icon "bell" False False
-                , text "Alerts"
+                , span [ class "navbar-item-text" ] [ text "Alerts" ]
                 ]
 
         settingsButton =
             a [ class ("navbar-item " ++ isActiveSettingsClass), onClick (SetContent SettingsView) ]
                 [ icon "cog" False False
-                , text "Settings"
+                , span [ class "navbar-item-text" ] [ text "Settings" ]
                 ]
 
         soundIcon =
@@ -402,13 +402,14 @@ topMenu model =
             , attribute "role" "navigation"
             ]
             [ div [ class "navbar-brand logo" ]
-                [ img [ src "/logo_horizontal.svg" ] []
-                , span [] [ text "WINDSHIELD" ]
-                , div [ class "monitor-stats" ]
+                [ img [ class "logo-img", src "/logo_horizontal.svg" ] []
+                , span [ class "title-span is-hidden-mobile" ] [ text "WINDSHIELD" ]
+                , span [ class "title-span is-hidden-tablet" ] [ text "WS" ]
+                , div [ class "monitor-stats is-hidden-mobile" ]
                     [ monitorConnectionStatus
-                    , p [] [ text ("Last Synched Block: " ++ toString model.monitorState.lastBlockNum) ]
+                    , p [] [ text ("Last Sync.Block: " ++ toString model.monitorState.lastBlockNum) ]
                     , p [ class "has-text-warning" ]
-                        [ text "Current Producer: "
+                        [ text "Current Prod: "
                         , b [] [ text currentProducer ]
                         ]
                     ]
@@ -555,15 +556,15 @@ nodesList model =
         table [ class "table is-striped is-hoverable is-fullwidth" ]
             [ thead []
                 (tr []
-                    [ th [] [ text "" ]
+                    [ th [ class "is-hidden-mobile" ] [ text "" ]
                     , th [] [ text "Account" ]
-                    , th [] [ text "Address" ]
-                    , th [] [ text "Type" ]
-                    , th [] [ text "Last Prd Block" ]
-                    , th [] [ text "Last Prd At" ]
-                    , th [] [ text "Vote Rank" ]
+                    , th [ class "is-hidden-mobile" ] [ text "Address" ]
+                    , th [ class "is-hidden-mobile" ] [ text "Type" ]
+                    , th [ class "is-hidden-mobile" ] [ text "Last Prd Block" ]
+                    , th [ class "is-hidden-mobile" ] [ text "Last Prd At" ]
+                    , th [ class "is-hidden-mobile" ] [ text "Vote Rank" ]
                     , th [] [ text "Status" ]
-                    , th [] [ text "Head Block" ]
+                    , th [ class "is-hidden-mobile" ] [ text "Head Block" ]
                     ]
                     :: nodesRows
                 )
@@ -718,7 +719,7 @@ nodeRow model node =
         ( lastPrdAt, lastPrdBlock, votePosition ) =
             case node.nodeType of
                 BlockProducer ->
-                    ( calcTimeDiff node.lastProducedBlockAt model.currentTime
+                    ( calcTimeDiffProd node.lastProducedBlockAt model.currentTime
                     , toString node.lastProducedBlock
                     , voteText
                     )
@@ -727,7 +728,7 @@ nodeRow model node =
                     ( "--", "--", "--" )
 
                 ExternalBlockProducer ->
-                    ( calcTimeDiff node.lastProducedBlockAt model.currentTime
+                    ( calcTimeDiffProd node.lastProducedBlockAt model.currentTime
                     , toString node.lastProducedBlock
                     , voteText
                     )
@@ -747,26 +748,26 @@ nodeRow model node =
                     [ icon "bell-o" False False ]
     in
         tr [ class producerClass ]
-            [ td [] actions
+            [ td [ class "is-hidden-mobile" ] actions
             , td []
                 [ alertIcon
                 , small [ class "node-position" ]
                     [ text (toString node.position ++ ". ") ]
                 , text node.account
                 ]
-            , td []
+            , td [ class "is-hidden-mobile" ]
                 [ a
                     [ href (nodeAddressLink node)
                     , target "_blank"
                     ]
                     [ text (nodeAddress node) ]
                 ]
-            , td [] [ nodeTagger node.nodeType ]
-            , td [] [ text lastPrdBlock ]
-            , td [] [ text lastPrdAt ]
-            , td [] [ text votePosition ]
+            , td [ class "is-hidden-mobile" ] [ nodeTagger node.nodeType ]
+            , td [ class "is-hidden-mobile" ] [ text lastPrdBlock ]
+            , td [ class "is-hidden-mobile" ] [ text lastPrdAt ]
+            , td [ class "is-hidden-mobile" ] [ text votePosition ]
             , td [] [ status ]
-            , td [] [ text (toString node.headBlockNum) ]
+            , td [ class "is-hidden-mobile" ] [ text (toString node.headBlockNum) ]
             ]
 
 
@@ -870,8 +871,8 @@ settingsContent model =
             ]
 
 
-pageFooter : Html Msg
-pageFooter =
+pageFooter : Model -> Html Msg
+pageFooter model =
     footer [ class "footer" ]
         [ div [ class "container" ]
             [ div [ class "content has-text-centered" ]
@@ -885,6 +886,9 @@ pageFooter =
                     , a [ href "https://www.cypherglass.com/" ]
                         [ text "Cypherglass.com" ]
                     , text "."
+                    , br [] []
+                    , text ("UI Version: " ++ model.uiVersion)
+                    , text (" / Server Version: " ++ model.monitorState.version)
                     ]
                 ]
             ]
@@ -914,6 +918,6 @@ view model =
             [ topMenu model
             , notificationsView model
             , mainContent model
-            , pageFooter
+            , pageFooter model
             , modal
             ]

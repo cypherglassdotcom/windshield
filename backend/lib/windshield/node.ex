@@ -139,7 +139,7 @@ defmodule Windshield.Node do
           end
 
         last_unsynched_blocks_alert_at =
-          if unsynched_blocks && state.type != "EBP" &&
+          if unsynched_blocks && state.type != "EBP" && state.is_watchable &&
                last_unsynched_blocks_alert_diff > same_alert_interval_mins * 60_000_000_000 do
             error = """
             Node #{state.name} is out of sync with Principal Node #{settings["principal_node"]}.
@@ -180,6 +180,7 @@ defmodule Windshield.Node do
       with false <- bp_paused,
            # should alert only if bp is under top 21
            true <- state.vote_position <= 21,
+           true <- state.is_watchable,
            true <- last_production_diff_secs > state.settings["bp_tolerance_time_secs"],
            last_bpcheck_alert_interval <- System.os_time() - state.last_bpcheck_alert_at,
            true <- last_bpcheck_alert_interval > same_alert_interval do
@@ -263,7 +264,8 @@ defmodule Windshield.Node do
       calc_production_time(new_produced_block_at)
 
     if last_production_datetime < state.last_bpcheck_alert_at &&
-         new_production_datetime > state.last_bpcheck_alert_at do
+         new_production_datetime > state.last_bpcheck_alert_at &&
+         state.is_watchable do
       msg = """
       Block Producer Node #{state.name} came back at full steam production!
       New Block production registered at #{new_produced_block_at_txt} UTC,
@@ -398,12 +400,12 @@ defmodule Windshield.Node do
         last_ping_alert_at,
         error,
         ping_stats,
-        submit_alert
+        is_watchable
       ) do
     same_alert_interval = same_alert_interval_mins * 60_000_000_000
     last_ping_alert_diff = System.os_time() - last_ping_alert_at
 
-    if last_ping_alert_diff > same_alert_interval && submit_alert do
+    if last_ping_alert_diff > same_alert_interval && is_watchable do
       Database.insert_alert(Alerts.unanswered_ping(), error, ping_stats)
       System.os_time()
     else
@@ -413,7 +415,7 @@ defmodule Windshield.Node do
 
   def broadcast_restored_ping(state) do
     # only send alert if it had an error status before
-    if state.status == :error do
+    if state.status == :error && state.is_watchable do
       msg = "#{state.account} answered a successful ping and it's now restored!"
       Database.insert_alert(Alerts.restored_ping(), msg)
     end

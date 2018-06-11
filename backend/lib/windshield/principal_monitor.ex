@@ -35,7 +35,8 @@ defmodule Windshield.PrincipalMonitor do
       nodes_pids: [],
       nodes: [],
       producers: [],
-      last_calc_votes_at: 0
+      last_calc_votes_at: 0,
+      version: Mix.Project.config[:version]
     }
 
     table = :ets.new(name, [:named_table, read_concurrency: true])

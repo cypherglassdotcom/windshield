@@ -4,6 +4,7 @@ import registerServiceWorker from './registerServiceWorker';
 
 const STORAGE_KEY = "CGWINDSHIELD"
 
+const UI_VERSION = __webpack_hash__
 const SOCKET_SERVER = window.APP_SOCKET_SERVER
 const BACKEND_SERVER = window.APP_BACKEND_SERVER
 
@@ -11,7 +12,7 @@ const storageBody = localStorage.getItem(STORAGE_KEY)
 const loadedUser = storageBody ? JSON.parse(storageBody) :
   { userName: "", token: "", expiration: 0 }
 
-const flags = { user: loadedUser, socketServer: SOCKET_SERVER, backendServer: BACKEND_SERVER }
+const flags = { user: loadedUser, socketServer: SOCKET_SERVER, backendServer: BACKEND_SERVER, uiVersion: UI_VERSION }
 
 const app = Main.embed(document.getElementById('root'), flags)
 
