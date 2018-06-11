@@ -403,8 +403,9 @@ topMenu model =
             ]
             [ div [ class "navbar-brand logo" ]
                 [ img [ class "logo-img", src "/logo_horizontal.svg" ] []
-                , span [ class "title-span" ] [ text "WINDSHIELD" ]
-                , div [ class "monitor-stats" ]
+                , span [ class "title-span is-hidden-mobile" ] [ text "WINDSHIELD" ]
+                , span [ class "title-span is-hidden-tablet" ] [ text "WS" ]
+                , div [ class "monitor-stats is-hidden-mobile" ]
                     [ monitorConnectionStatus
                     , p [] [ text ("Last Sync.Block: " ++ toString model.monitorState.lastBlockNum) ]
                     , p [ class "has-text-warning" ]
@@ -555,15 +556,15 @@ nodesList model =
         table [ class "table is-striped is-hoverable is-fullwidth" ]
             [ thead []
                 (tr []
-                    [ th [] [ text "" ]
+                    [ th [ class "is-hidden-mobile" ] [ text "" ]
                     , th [] [ text "Account" ]
-                    , th [] [ text "Address" ]
-                    , th [] [ text "Type" ]
-                    , th [] [ text "Last Prd Block" ]
-                    , th [] [ text "Last Prd At" ]
-                    , th [] [ text "Vote Rank" ]
+                    , th [ class "is-hidden-mobile" ] [ text "Address" ]
+                    , th [ class "is-hidden-mobile" ] [ text "Type" ]
+                    , th [ class "is-hidden-mobile" ] [ text "Last Prd Block" ]
+                    , th [ class "is-hidden-mobile" ] [ text "Last Prd At" ]
+                    , th [ class "is-hidden-mobile" ] [ text "Vote Rank" ]
                     , th [] [ text "Status" ]
-                    , th [] [ text "Head Block" ]
+                    , th [ class "is-hidden-mobile" ] [ text "Head Block" ]
                     ]
                     :: nodesRows
                 )
@@ -747,26 +748,26 @@ nodeRow model node =
                     [ icon "bell-o" False False ]
     in
         tr [ class producerClass ]
-            [ td [] actions
+            [ td [ class "is-hidden-mobile" ] actions
             , td []
                 [ alertIcon
                 , small [ class "node-position" ]
                     [ text (toString node.position ++ ". ") ]
                 , text node.account
                 ]
-            , td []
+            , td [ class "is-hidden-mobile" ]
                 [ a
                     [ href (nodeAddressLink node)
                     , target "_blank"
                     ]
                     [ text (nodeAddress node) ]
                 ]
-            , td [] [ nodeTagger node.nodeType ]
-            , td [] [ text lastPrdBlock ]
-            , td [] [ text lastPrdAt ]
-            , td [] [ text votePosition ]
+            , td [ class "is-hidden-mobile" ] [ nodeTagger node.nodeType ]
+            , td [ class "is-hidden-mobile" ] [ text lastPrdBlock ]
+            , td [ class "is-hidden-mobile" ] [ text lastPrdAt ]
+            , td [ class "is-hidden-mobile" ] [ text votePosition ]
             , td [] [ status ]
-            , td [] [ text (toString node.headBlockNum) ]
+            , td [ class "is-hidden-mobile" ] [ text (toString node.headBlockNum) ]
             ]
 
 
