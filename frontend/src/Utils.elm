@@ -10,6 +10,19 @@ import Time
 import Date
 
 
+genesisTime : Time.Time
+genesisTime =
+    1527897600000
+
+
+calcTimeDiffProd : Time.Time -> Time.Time -> String
+calcTimeDiffProd bpTime nowTime =
+    if bpTime < genesisTime then
+        "No Data"
+    else
+        calcTimeDiff bpTime nowTime
+
+
 calcTimeDiff : Time.Time -> Time.Time -> String
 calcTimeDiff timeOld timeNew =
     let

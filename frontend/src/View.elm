@@ -719,7 +719,7 @@ nodeRow model node =
         ( lastPrdAt, lastPrdBlock, votePosition ) =
             case node.nodeType of
                 BlockProducer ->
-                    ( calcTimeDiff node.lastProducedBlockAt model.currentTime
+                    ( calcTimeDiffProd node.lastProducedBlockAt model.currentTime
                     , toString node.lastProducedBlock
                     , voteText
                     )
@@ -728,7 +728,7 @@ nodeRow model node =
                     ( "--", "--", "--" )
 
                 ExternalBlockProducer ->
-                    ( calcTimeDiff node.lastProducedBlockAt model.currentTime
+                    ( calcTimeDiffProd node.lastProducedBlockAt model.currentTime
                     , toString node.lastProducedBlock
                     , voteText
                     )
