@@ -871,8 +871,8 @@ settingsContent model =
             ]
 
 
-pageFooter : Html Msg
-pageFooter =
+pageFooter : Model -> Html Msg
+pageFooter model =
     footer [ class "footer" ]
         [ div [ class "container" ]
             [ div [ class "content has-text-centered" ]
@@ -886,6 +886,9 @@ pageFooter =
                     , a [ href "https://www.cypherglass.com/" ]
                         [ text "Cypherglass.com" ]
                     , text "."
+                    , br [] []
+                    , text ("UI Version: " ++ model.uiVersion)
+                    , text (" / Server Version: " ++ model.monitorState.version)
                     ]
                 ]
             ]
@@ -915,6 +918,6 @@ view model =
             [ topMenu model
             , notificationsView model
             , mainContent model
-            , pageFooter
+            , pageFooter model
             , modal
             ]

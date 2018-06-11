@@ -68,6 +68,7 @@ initModel flags =
             , backendServer = flags.backendServer
             , phxSocket = phxSocket
             , content = content
+            , uiVersion = flags.uiVersion
         }
 
 
@@ -96,7 +97,7 @@ initialModel =
     , currentProducer = Nothing
     , phxSocket = initPhxSocket ""
     , monitorConnected = False
-    , monitorState = MonitorState InitialMonitor 0
+    , monitorState = MonitorState InitialMonitor 0 "loading..."
     , nodeForm = newNode
     , viewingNode = Nothing
     , chainInfo = Nothing
@@ -104,6 +105,7 @@ initialModel =
     , settingsForm = Settings "" 0 0 0 0 0 0 0
     , editSettingsForm = False
     , alerts = []
+    , uiVersion = "loading..."
     }
 
 

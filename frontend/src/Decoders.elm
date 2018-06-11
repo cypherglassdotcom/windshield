@@ -39,10 +39,10 @@ wsErrorDecoder =
     JD.at [ "error" ] JD.string
 
 
-statsDecoder : JD.Decoder MonitorState
+statsDecoder : JD.Decoder MonitorStats
 statsDecoder =
     JD.map2
-        MonitorState
+        MonitorStats
         (JD.field "status" monitorStatusDecoder)
         (JD.field "last_block" JD.int)
 
@@ -293,6 +293,7 @@ monitorStateDecoder =
     JDP.decode MonitorState
         |> JDP.required "status" monitorStatusDecoder
         |> JDP.hardcoded 0
+        |> JDP.required "version" JD.string
 
 
 settingsDecoder : JD.Decoder Settings

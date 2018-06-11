@@ -44,6 +44,7 @@ type alias Flags =
     { user : User
     , socketServer : String
     , backendServer : String
+    , uiVersion : String
     }
 
 
@@ -55,6 +56,13 @@ type alias User =
 
 
 type alias MonitorState =
+    { status : MonitorStatus
+    , lastBlockNum : Int
+    , version : String
+    }
+
+
+type alias MonitorStats =
     { status : MonitorStatus
     , lastBlockNum : Int
     }
@@ -168,6 +176,7 @@ type alias Model =
     , chainInfo : Maybe ChainInfo
     , viewingNode : Maybe Node
     , alerts : List Alert
+    , uiVersion : String
     }
 
 

@@ -12,6 +12,10 @@ defmodule WindshieldWeb.RootController do
     json(conn, "OK")
   end
 
+  def version(conn, _params) do
+    json(conn, Mix.Project.config[:version])
+  end
+
   def monitor_state(conn, _params) do
     {:ok, state} = PrincipalMonitor.get_state()
 

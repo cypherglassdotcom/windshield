@@ -18,6 +18,7 @@ defmodule WindshieldWeb.Router do
     pipe_through(:api)
 
     get("/health-check", RootController, :health_check)
+    get("/version", RootController, :version)
     post("/auth", RootController, :auth)
     get("/monitor-state", RootController, :monitor_state)
     get("/node-state/:account", RootController, :node_state)
