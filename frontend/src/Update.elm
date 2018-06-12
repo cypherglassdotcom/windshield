@@ -436,6 +436,13 @@ update msg model =
 
         Tick time ->
             let
+                -- autologout, reset user if it's expired
+                user =
+                    if model.currentTime > model.user.expiration then
+                        User "" "" 0
+                    else
+                        model.user
+
                 -- erase after 10 secs
                 notifications =
                     model.notifications
@@ -444,7 +451,7 @@ update msg model =
                                 (model.currentTime - notification.time) < 10000
                             )
             in
-                ( { model | currentTime = time, notifications = notifications }, Cmd.none )
+                ( { model | currentTime = time, notifications = notifications, user = user }, Cmd.none )
 
         DeleteNotification id ->
             let
@@ -495,14 +502,22 @@ update msg model =
             )
 
         AuthResponse (Ok user) ->
-            ( { model
-                | isLoading = model.isLoading - 1
-                , user = user
-                , showAdminLogin = False
-                , adminPassword = ""
-              }
-            , signedIn (userEncoder user)
-            )
+            let
+                expirationTime =
+                    model.currentTime + (82800 * 1000)
+
+                -- 23 hours
+                newUser =
+                    { user | expiration = expirationTime }
+            in
+                ( { model
+                    | isLoading = model.isLoading - 1
+                    , user = newUser
+                    , showAdminLogin = False
+                    , adminPassword = ""
+                  }
+                , signedIn (userEncoder newUser)
+                )
 
         AuthResponse (Err _) ->
             let
