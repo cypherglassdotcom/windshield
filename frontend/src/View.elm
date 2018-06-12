@@ -531,6 +531,27 @@ nodeTagger nodeType =
         span [ class ("tag " ++ nodeClass) ] [ text txt ]
 
 
+nodesComparison : Node -> Node -> Order
+nodesComparison a b =
+    case compare a.position b.position of
+        LT ->
+            LT
+
+        EQ ->
+            case compare a.votePosition b.votePosition of
+                LT ->
+                    LT
+
+                EQ ->
+                    compare a.account b.account
+
+                GT ->
+                    GT
+
+        GT ->
+            GT
+
+
 nodesList : Model -> Html Msg
 nodesList model =
     let
@@ -541,7 +562,7 @@ nodesList model =
             if List.length nodes > 0 then
                 nodes
                     |> List.filter (\n -> not n.isArchived)
-                    |> List.sortBy .position
+                    |> List.sortWith nodesComparison
                     |> List.map (\n -> nodeRow model n)
             else
                 [ tr []
@@ -562,7 +583,7 @@ nodesList model =
                     , th [ class "is-hidden-mobile" ] [ text "Type" ]
                     , th [ class "is-hidden-mobile" ] [ text "Last Prd Block" ]
                     , th [ class "is-hidden-mobile" ] [ text "Last Prd At" ]
-                    , th [ class "is-hidden-mobile" ] [ text "Vote Rank" ]
+                    , th [] [ text "Vote Rank" ]
                     , th [] [ text "Status" ]
                     , th [ class "is-hidden-mobile" ] [ text "Head Block" ]
                     ]
@@ -736,13 +757,13 @@ nodeRow model node =
         alertIcon =
             if node.isWatchable then
                 small
-                    [ class "has-text-primary"
+                    [ class "has-text-primary is-hidden-mobile"
                     , title "Alerts ON"
                     ]
                     [ icon "bell" False False ]
             else
                 small
-                    [ class "has-text-grey-light"
+                    [ class "has-text-grey-light is-hidden-mobile"
                     , title "Alerts OFF"
                     ]
                     [ icon "bell-o" False False ]
@@ -751,7 +772,7 @@ nodeRow model node =
             [ td [ class "is-hidden-mobile" ] actions
             , td []
                 [ alertIcon
-                , small [ class "node-position" ]
+                , small [ class "node-position is-hidden-mobile" ]
                     [ text (toString node.position ++ ". ") ]
                 , text node.account
                 ]
@@ -765,7 +786,7 @@ nodeRow model node =
             , td [ class "is-hidden-mobile" ] [ nodeTagger node.nodeType ]
             , td [ class "is-hidden-mobile" ] [ text lastPrdBlock ]
             , td [ class "is-hidden-mobile" ] [ text lastPrdAt ]
-            , td [ class "is-hidden-mobile" ] [ text votePosition ]
+            , td [] [ text votePosition ]
             , td [] [ status ]
             , td [ class "is-hidden-mobile" ] [ text (toString node.headBlockNum) ]
             ]
