@@ -118,7 +118,7 @@ defmodule Windshield.PrincipalMonitor do
   end
 
   def handle_info(:monitor_loop, state) do
-    last_block = state.stats["last_block"]
+    last_block = state.current_block_head_num
     log_info(state, "Monitor Loop - #{state.status} | LB: #{last_block}")
 
     # refresh principal url

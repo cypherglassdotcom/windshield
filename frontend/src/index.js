@@ -4,7 +4,7 @@ import registerServiceWorker from './registerServiceWorker'
 
 const STORAGE_KEY = "CGWINDSHIELD"
 
-const UI_VERSION = '0.1.1'
+const UI_VERSION = '0.2.0'
 const SOCKET_SERVER = window.APP_SOCKET_SERVER
 const BACKEND_SERVER = window.APP_BACKEND_SERVER
 
