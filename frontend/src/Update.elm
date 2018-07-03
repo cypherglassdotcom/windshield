@@ -401,35 +401,13 @@ update msg model =
                     newErrorNotification model "Fail to parse alert data, please see alert tabs and check your notification channels" True
 
         ReceiveProducer raw ->
-            case JD.decodeValue producerDecoder raw of
+            case JD.decodeValue producerMinDecoder raw of
                 Ok producer ->
-                    let
-                        producerExists =
-                            (model.producers
-                                |> List.filter (\p -> p.account == producer.account)
-                                |> List.length
-                            )
-                                > 0
-
-                        producers =
-                            if producerExists then
-                                model.producers
-                                    |> List.map
-                                        (\p ->
-                                            if p.account == producer.account then
-                                                producer
-                                            else
-                                                p
-                                        )
-                            else
-                                model.producers ++ [ producer ]
-                    in
-                        ( { model
-                            | producers = producers
-                            , currentProducer = Just producer.account
-                          }
-                        , Cmd.none
-                        )
+                    ( { model
+                        | currentProducer = Just producer.account
+                      }
+                    , Cmd.none
+                    )
 
                 Err _ ->
                     newErrorNotification model "Fail to parse Producers Data" True

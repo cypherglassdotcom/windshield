@@ -27,6 +27,8 @@ defmodule Windshield.Alerts do
   def restored_voting_position, do: @restored_voting_position
   def nodes_full_fork_report, do: @nodes_full_fork_report
 
+  def alert_mail(@voting_position, _description), do: nil
+  def alert_mail(@restored_voting_position, _description), do: nil
   def alert_mail(type, description) do
     body = """
     <pre>#{description}</pre>

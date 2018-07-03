@@ -54,6 +54,9 @@ defmodule Windshield.Node do
       bp_paused: false,
       last_info: nil,
       last_head_block_num: 0,
+      lib_num: 0,
+      head_producer: "",
+      head_block_time: "",
       ping_stats: %{
         ping_ms: -1,
         ping_total_requests: 0,
@@ -202,12 +205,19 @@ defmodule Windshield.Node do
     {info_body, ping, error} = ping_info(state)
 
     # update last head block num
-    {ping, last_head_block_num} =
+    {ping, last_head_block_num, lib_num, head_producer, head_block_time} =
       case info_body do
-        %{"head_block_num" => num} ->
-          {ping, num}
+        %{
+          "head_block_num" => num,
+          "last_irreversible_block_num" => lib,
+          "head_block_producer" => producer,
+          "head_block_time" => block_time,
+        } ->
+          {ping, num, lib, producer, block_time}
         _ ->
-          {@invalid_ping, state.last_head_block_num} # if has invalid body, change the ping to invalid
+          # if has invalid body, change the ping to invalid
+          {@invalid_ping, state.last_head_block_num, state.lib_num, state.head_producer, state.head_block_time}
+
       end
 
     new_ping_stats = calc_ping_stats(state, ping)
@@ -245,7 +255,10 @@ defmodule Windshield.Node do
         ping_stats: new_ping_stats,
         last_info: info_body,
         last_ping_alert_at: last_alert,
-        last_head_block_num: last_head_block_num
+        last_head_block_num: last_head_block_num,
+        lib_num: lib_num,
+        head_producer: head_producer,
+        head_block_time: head_block_time
     }
 
     WindshieldWeb.Endpoint.broadcast("monitor:main", "tick_node", new_state)
@@ -253,9 +266,9 @@ defmodule Windshield.Node do
     {:noreply, new_state}
   end
 
-  def handle_cast({:update_produced_block, block_info}, state) do
-    new_produced_block = block_info["block_num"]
-    new_produced_block_at = block_info["timestamp"]
+  def handle_cast({:update_produced_block, block_num, timestamp}, state) do
+    new_produced_block = block_num
+    new_produced_block_at = timestamp
 
     {last_produced_block_at, last_production_datetime} =
       calc_production_time(state.last_produced_block_at)
@@ -312,7 +325,7 @@ defmodule Windshield.Node do
   end
 
   def handle_call(:get_head_block, _from, state) do
-    {:reply, {:ok, state.last_head_block_num}, state}
+    {:reply, {:ok, state.last_head_block_num, state.lib_num, state.head_producer, state.head_block_time}, state}
   end
 
   def handle_call({:get_block_info, block_num}, _from, state) do
