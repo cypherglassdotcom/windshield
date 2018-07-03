@@ -233,6 +233,16 @@ producerDecoder =
         |> JDP.required "transactions" JD.int
 
 
+producerMinDecoder : JD.Decoder Producer
+producerMinDecoder =
+    JDP.decode Producer
+        |> JDP.required "producer" JD.string
+        |> JDP.hardcoded 0
+        |> JDP.hardcoded 0
+        |> JDP.hardcoded 0
+        |> JDP.hardcoded 0
+
+
 mergeProductionToNodes : List Node -> List Producer -> List Node
 mergeProductionToNodes nodes producers =
     let

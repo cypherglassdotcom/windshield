@@ -30,6 +30,8 @@ defmodule Windshield.PrincipalMonitor do
       stats: nil,
       block_processing: -1,
       current_block_head_num: -1,
+      current_lib_num: -1,
+      current_head_producer: "",
       principal_node: nil,
       principal_url: nil,
       nodes_pids: [],
@@ -54,19 +56,10 @@ defmodule Windshield.PrincipalMonitor do
   def handle_info(:load_settings, state) do
     {:ok, settings} = Database.get_settings()
 
-    # if settings["principal_node"] == "" do
-    #   Logger.info(
-    #     "#{state.name} >>> Can't initialize the monitor without setting a principal node"
-    #   )
-
-    #   :timer.sleep(10_000)
-    #   raise "Invalid Princpal Node in Settings"
-    # end
-
     {:ok, nodes} = Database.get_nodes()
     nodes = nodes |> Enum.filter(fn n -> !n["is_archived"] end)
 
-    {:ok, stats} = Database.get_stats()
+    stats = %{"id" => 1, "last_block" => 0, "lib" => 0}
 
     {:ok, producers} = Database.get_producers()
 
@@ -78,9 +71,6 @@ defmodule Windshield.PrincipalMonitor do
 
     {state, loop, loop_name} =
       if principal_node == nil do
-        # Logger.info("#{state.name} >>> Invalid principal node #{settings["principal_node"]}")
-        # :timer.sleep(10_000)
-        # raise "Principal Node not Found from the one in Settings"
 
         state = %{
           state
@@ -128,35 +118,22 @@ defmodule Windshield.PrincipalMonitor do
   end
 
   def handle_info(:monitor_loop, state) do
-    current_nodes = Enum.count(state.nodes)
     last_block = state.stats["last_block"]
-    log_info(state, "Monitor Loop - #{state.status} | LB: #{last_block} | CN: #{current_nodes}")
+    log_info(state, "Monitor Loop - #{state.status} | LB: #{last_block}")
 
     # refresh principal url
     state = %{state | principal_url: get_principal_url(state.principal_node)}
 
     # update blocks and sync
-    new_state =
-      case process_block_check(state) do
-        {:syncing, principal_node, processing_block, current_block_head_num} ->
-          new_state = %{
-            state
-            | status: :syncing,
-              current_block_head_num: current_block_head_num,
-              principal_node: principal_node
-          }
+    new_state = initialize_block_processing(state)
 
-          log_info(state, "Monitor Start Syncing...")
-          new_state = process_block_loop(principal_node, processing_block, new_state)
-          log_info(state, "Monitor End of Sync")
+    if (new_state.current_block_head_num != state.current_block_head_num) do
+      tick_stats(new_state)
+    end
 
-          new_state
-
-        _ ->
-          # broadcast to websocket the last status
-          tick_stats(state)
-          state
-      end
+    if (new_state.current_head_producer != state.current_head_producer) do
+      tick_producer(new_state)
+    end
 
     # check votes
     calc_votes_interval = state.settings["calc_votes_interval_secs"] * 1_000_000_000
@@ -204,132 +181,27 @@ defmodule Windshield.PrincipalMonitor do
     end)
   end
 
-  def process_block_loop(principal_node, processing_block, state) do
-    case GenServer.call(principal_node, {:get_block_info, processing_block}) do
-      {:ok, info} ->
-        # process block
-        {new_stats, updated_producers} =
-          do_process_block(state.stats, state.producers, processing_block, info)
+  def tick_stats(state) do
+    stats =
+      state.stats
+      |> Map.put("status", state.status)
+      |> Map.put("last_block", state.current_block_head_num)
 
-        # update respective node
-        GenServer.cast(String.to_atom(info["producer"]), {:update_produced_block, info})
-
-        # update state
-        new_state = %{state | stats: new_stats, producers: updated_producers}
-
-        # broadcast to websocket
-        tick_stats(new_state)
-
-        # update ets and log info
-        :ets.insert(new_state.name, {"state", new_state})
-
-        log_info(
-          state,
-          "Synched Producers: #{Enum.count(new_state.producers)} | Synched Last Block: #{
-            new_state.stats["last_block"]
-          }"
-        )
-
-        # recursive call to next process block
-        {status, principal_node, processing_block, _} = process_block_check(new_state)
-
-        if status == :syncing do
-          process_block_loop(principal_node, processing_block, new_state)
-        else
-          %{
-            new_state
-            | status: status,
-              principal_node: principal_node,
-              block_processing: processing_block
-          }
-        end
-
-      err ->
-        # error, rollbacks to active status
-        log_error(
-          state,
-          "Fail to get Block Info from #{principal_node}, Block num #{processing_block}, error:\n#{
-            inspect(err)
-          }"
-        )
-
-        %{state | block_processing: -1, status: :active}
-    end
+    WindshieldWeb.Endpoint.broadcast("monitor:main", "tick_stats", stats)
   end
 
-  def tick_stats(state) do
-    stats = state.stats |> Map.put("status", state.status)
-    WindshieldWeb.Endpoint.broadcast("monitor:main", "tick_stats", stats)
+  def tick_producer(state) do
+    WindshieldWeb.Endpoint.broadcast("monitor:main", "tick_producer", %{ producer: state.current_head_producer })
   end
 
   def initialize_block_processing(state) do
     with principal_node <- state.principal_node,
-         {:ok, head_block_num} <- GenServer.call(principal_node, :get_head_block) do
-      {head_block_num, principal_node}
+         {:ok, head_block_num, lib_num, head_producer, head_block_time} <- GenServer.call(principal_node, :get_head_block) do
+      GenServer.cast(String.to_atom(head_producer), {:update_produced_block, head_block_num, head_block_time})
+      %{ state | current_block_head_num: head_block_num, current_lib_num: lib_num, current_head_producer: head_producer}
     else
-      _ -> {-1, nil}
+      _ -> state
     end
-  end
-
-  def process_block_check(state) do
-    {current_block_head_num, principal_node} =
-      case state.status do
-        :active ->
-          initialize_block_processing(state)
-
-        :syncing ->
-          {state.current_block_head_num, state.principal_node}
-      end
-
-    last_block = state.stats["last_block"]
-
-    if current_block_head_num > last_block do
-      processing_block = last_block + 1
-      log_info(state, "Process Block checked new syncing block #{processing_block}")
-      {:syncing, principal_node, processing_block, current_block_head_num}
-    else
-      {:active, principal_node, -1, current_block_head_num}
-    end
-  end
-
-  def do_process_block(stats, producers, block_num, block_info) do
-    block_producer = block_info["producer"]
-    block_transactions = block_info["transactions"] |> Enum.count()
-
-    blank_producer = %{
-      "account" => block_producer,
-      "blocks" => 0,
-      "transactions" => 0,
-      "last_produced_block" => 0,
-      "last_produced_block_at" => ""
-    }
-
-    Logger.info("New Block to #{block_producer}: ##{block_num} | Txs: #{block_transactions}")
-
-    new_producer =
-      producers |> Enum.find(blank_producer, fn p -> p["account"] == block_producer end)
-
-    new_producer = %{
-      new_producer
-      | "blocks" => new_producer["blocks"] + 1,
-        "transactions" => new_producer["transactions"] + block_transactions,
-        "last_produced_block" => block_info["block_num"],
-        "last_produced_block_at" => block_info["timestamp"]
-    }
-
-    new_stats = %{stats | "last_block" => block_num}
-
-    Database.update_producer(new_producer)
-    Database.update_stats(new_stats)
-
-    WindshieldWeb.Endpoint.broadcast("monitor:main", "tick_producer", new_producer)
-
-    updated_producers =
-      producers
-      |> Enum.filter(fn p -> p["account"] != block_producer end)
-      |> Kernel.++([new_producer])
-
-    {new_stats, updated_producers}
   end
 
   def spawn_node(node, settings) do
