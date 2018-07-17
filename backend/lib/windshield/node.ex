@@ -339,20 +339,6 @@ defmodule Windshield.Node do
     {:reply, {:ok, state.last_head_block_num, state.lib_num, state.head_producer, state.head_block_time}, state}
   end
 
-  def handle_call({:get_block_info, block_num}, _from, state) do
-    {status, response_body} =
-      case EosApi.get_block_info(state.url, block_num) do
-        {:ok, body} ->
-          {:ok, body}
-
-        {:error, err} ->
-          Logger.error("#{state.name} >>> Fail to get #{state.url}\n #{inspect(err)}")
-          {:error, nil}
-      end
-
-    {:reply, {status, response_body}, state}
-  end
-
   def calc_ping_stats(state, ping) do
     ping_stats = state.ping_stats
 

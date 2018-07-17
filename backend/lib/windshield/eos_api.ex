@@ -7,7 +7,7 @@ defmodule Windshield.EosApi do
 
   plug(Tesla.Middleware.JSON)
 
-  plug(Tesla.Middleware.Timeout, timeout: 3_000)
+  plug(Tesla.Middleware.Timeout, timeout: 5_000)
 
   def get_chain_info(url) do
     url
@@ -30,12 +30,13 @@ defmodule Windshield.EosApi do
     |> validate_request()
   end
 
-  def get_producers(url) do
+  def get_producers(url, lower_bound \\ "") do
     data = %{
       "scope" => "eosio",
       "code" => "eosio",
       "table" => "producers",
       "json" => "true",
+      "lower_bound" => lower_bound,
       "limit" => 9999
     }
 

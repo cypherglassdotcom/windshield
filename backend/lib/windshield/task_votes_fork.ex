@@ -14,10 +14,18 @@ defmodule Windshield.TaskVotesFork do
     Task.start(__MODULE__, :calc_votes, [principal_node, principal_url, block_num])
   end
 
-  def get_producers_table(principal_url) do
-    case EosApi.get_producers(principal_url) do
+  def get_producers_table(principal_url, lower_bound \\ "") do
+    Logger.info("Reading Producers Table Lower Bound: #{lower_bound}")
+    case EosApi.get_producers(principal_url, lower_bound) do
       {:ok, body} ->
-        {:ok, body["rows"]}
+        if body["more"] do
+          case get_producers_table(principal_url, List.last(body["rows"])["owner"]) do
+            {:ok, next_body} -> {:ok, body["rows"] ++ tl(next_body)}
+            {:error, err} -> {:error, err}
+          end
+        else
+          {:ok, body["rows"]}
+        end
 
       {:error, err} ->
         Logger.error("Fail to get #{principal_url} PRODUCERS\n #{inspect(err)}")
