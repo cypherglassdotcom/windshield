@@ -72,6 +72,7 @@ defmodule Windshield.Node do
       votes_count: 0,
       vote_position: 9999,
       vote_percentage: 0,
+      vote_changed: 0,
       settings: settings
     }
 
@@ -183,6 +184,7 @@ defmodule Windshield.Node do
       with false <- bp_paused,
            # should alert only if bp is under top 21
            true <- state.vote_position <= 21,
+           true <- (System.os_time() - state.vote_changed) / 1_000_000_000 > state.settings["bp_tolerance_time_secs"],
            true <- state.is_watchable,
            true <- last_production_diff_secs > state.settings["bp_tolerance_time_secs"],
            last_bpcheck_alert_interval <- System.os_time() - state.last_bpcheck_alert_at,
@@ -297,11 +299,20 @@ defmodule Windshield.Node do
   end
 
   def handle_cast({:update_votes, votes_count, vote_percentage, bp_vote_position}, state) do
+
+    vote_changed =
+      if bp_vote_position <= 21 && state.vote_position > 21 do
+        System.os_time()
+      else
+        state.vote_changed
+      end
+
     new_state = %{
       state
       | votes_count: votes_count,
         vote_percentage: vote_percentage,
-        vote_position: bp_vote_position
+        vote_position: bp_vote_position,
+        vote_changed: vote_changed
     }
 
     if new_state.vote_position != state.vote_position && state.vote_position > 0 &&
@@ -326,20 +337,6 @@ defmodule Windshield.Node do
 
   def handle_call(:get_head_block, _from, state) do
     {:reply, {:ok, state.last_head_block_num, state.lib_num, state.head_producer, state.head_block_time}, state}
-  end
-
-  def handle_call({:get_block_info, block_num}, _from, state) do
-    {status, response_body} =
-      case EosApi.get_block_info(state.url, block_num) do
-        {:ok, body} ->
-          {:ok, body}
-
-        {:error, err} ->
-          Logger.error("#{state.name} >>> Fail to get #{state.url}\n #{inspect(err)}")
-          {:error, nil}
-      end
-
-    {:reply, {status, response_body}, state}
   end
 
   def calc_ping_stats(state, ping) do
