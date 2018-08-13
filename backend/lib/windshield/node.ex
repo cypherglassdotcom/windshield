@@ -118,7 +118,7 @@ defmodule Windshield.Node do
     principal_node_pid = String.to_atom(settings["principal_node"])
 
     case GenServer.call(principal_node_pid, :get_head_block) do
-      {:ok, principal_head_block_num} ->
+      {:ok, principal_head_block_num, _lib_num, _head_producer, _head_block_time} ->
         unsynched_blocks_to_alert = settings["unsynched_blocks_to_alert"]
         same_alert_interval_mins = settings["same_alert_interval_mins"]
 
